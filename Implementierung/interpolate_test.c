@@ -6,30 +6,30 @@
 #include "stdio.h"
 
 bool intpolcalculation(int* intArray, int* allozspeicher, int hoehe, int breite, int factor) {
+    // Einzelne Sektoren werden bearbeitet
     for(int sektorh = 0; sektorh < hoehe;sektorh++) {
         for (int sektorb = 0; sektorb < breite; sektorb++) {
-            // sektor
-            //  a (0,0) -- c (s,0)
-            //  |              |
-            //  b (s,0) -- d (s,s)
-
+            //Sektoren a,b,c,d Werte, also (0,0), (0,s), (s,0) und (s,s) werden für alle berechnet
             int a = intArray[sektorh * breite + sektorb];
             int b = intArray[sektorh * breite + (sektorb + 1) % breite];
             int c = intArray[((sektorh + 1) % hoehe) * breite + sektorb];
             int d = intArray[((sektorh + 1) % hoehe) * breite + (sektorb + 1) % breite];
 
+            // Für jeden einzelnen Wert in den Quadraten berechne nach Formel den Wert
             for(int y=0;y<factor;y++) {
                 for (int x = 0; x < factor; x++) {
-                    //         -            h o e h e         -
-                    //printf("(%i * %i + %i ) * %i\n",sektorh,factor,y,breite);
+                    // berechne position im finalen AllozSpeicher
                     int pos = (x + factor * sektorb) + ((sektorh * factor + y) * breite * factor);
+                    // berechne Wert
                     int polwert = (a * (factor-y) * (factor-x) ) + ( c * y * ( factor-x) ) + ( b * (factor-y) * x ) + ( d * y * x );
+                    // multipliziere mit (1 / s*s)
                     polwert = polwert / (factor * factor);
                     //printf("[%i;%i] %i - %i\n",x,y,pos,polwert);
+
+                    //speichere ab
                     allozspeicher[pos] = polwert;
                 }
             }
-            //return true;
         }
     }
     return true;
