@@ -18,8 +18,18 @@ bool intpolcalculation(int* intArray, int* allozspeicher, int hoehe, int breite,
             // Für jeden einzelnen Wert in den Quadraten berechne nach Formel den Wert
             for(int y=0;y<factor;y++) {
                 for (int x = 0; x < factor; x++) {
+
+
                     // berechne position im finalen AllozSpeicher
                     int pos = (x + factor * sektorb) + ((sektorh * factor + y) * breite * factor);
+
+                    // da wert x=0, y=0 immer den a-Wert ergibt kann dieser auch direkt eingetragen werden
+                    // die berechnung füllt ja nur das quadrat für eins kleiner von s aus, dass keine Werte doppelt berechnet werden
+                    if(x == 0 && y == 0) {
+                        allozspeicher[pos] = a;
+                        continue;
+                    }
+
                     // berechne Wert
                     int polwert = (a * (factor-y) * (factor-x) ) + ( c * y * ( factor-x) ) + ( b * (factor-y) * x ) + ( d * y * x );
                     // multipliziere mit (1 / s*s)
