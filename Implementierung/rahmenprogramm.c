@@ -4,17 +4,11 @@
 #include <getopt.h>
 #include <string.h>
 
-void interpolate(const uint8_t* img, size_t width, size_t height, float a, float b, float c, 
-size_t scale_factor, uint8_t* tmp, uint8_t* result) {
 
-    // Berechnung
-
-}
-
-void grayscale(int* pixels, int* temp, int width, int height, float a, float b, float c) {
+void grayscale(uint8_t* pixels, uint8_t* temp, int width, int height, float a, float b, float c) {
     // Graustufenkonvertierung
 }
-void interpolation(temp, result, width, height, scaling) {
+void interpolation(uint8_t*temp, uint8_t*result, int width, int height, double scaling) {
     // Interpolation
 }
 
