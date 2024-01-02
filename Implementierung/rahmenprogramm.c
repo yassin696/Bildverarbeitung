@@ -5,7 +5,7 @@
 #include <string.h>
 
 
-void grayscale(uint8_t* red, uint8_t* blue, uint8_t green, uint8_t* temp, int width, int height, float a, float b, float c) {
+void grayscale(uint8_t* red, uint8_t* green, uint8_t blue, uint8_t* temp, int width, int height, float a, float b, float c) {
     // Graustufenkonvertierung
 }
 void interpolation(uint8_t*temp, uint8_t*result, int width, int height, double scaling) {
@@ -195,21 +195,21 @@ int main(int argc, char **argv){
             printf("Fehler beim Allozieren des Speichers.\n");
             return 1;
         }
-        int* blue = (int*)malloc(imageSize * sizeof(int));
-        if (blue == NULL) {
+        int* green = (int*)malloc(imageSize * sizeof(int));
+        if (green == NULL) {
             // Fehler beim Allizieren des Speichers
             printf("Fehler beim Allozieren des Speichers.\n");
             return 1;
         }
-        int* green = (int*)malloc(imageSize * sizeof(int));
-        if (green == NULL) {
+        int* blue = (int*)malloc(imageSize * sizeof(int));
+        if (blue == NULL) {
             // Fehler beim Allizieren des Speichers
             printf("Fehler beim Allozieren des Speichers.\n");
         }
         for (int i = 0; i < imageSize; i++) {
             red[i] = pixels[i].r;
-            blue[i] = pixels[i].b;
-            green[i] = pixels[i].g;
+            green[i] = pixels[i]g;
+            blue[i] = pixels[i].bg;
         }
 
         // Berechnung
@@ -236,11 +236,11 @@ int main(int argc, char **argv){
             printf("Fehler beim Allozieren des Speichers.\n");
             return 1;
         }
-        grayscale(red, blue, green, temp, width, height, a, b, c);
+        grayscale(red, green, blue, temp, width, height, a, b, c);
         free(pixels);
         free(red);
-        free(blue);
         free(green);
+        free(blue);
         interpolation(temp, result, width, height, scaling);
         free(temp);
         
