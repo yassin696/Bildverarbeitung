@@ -5,7 +5,7 @@
 #include <string.h>
 
 
-void grayscale(uint8_t* pixels, uint8_t* temp, int width, int height, float a, float b, float c) {
+void grayscale(uint8_t* red, uint8_t* blue, uint8_t green, uint8_t* temp, int width, int height, float a, float b, float c) {
     // Graustufenkonvertierung
 }
 void interpolation(uint8_t*temp, uint8_t*result, int width, int height, double scaling) {
@@ -178,7 +178,7 @@ int main(int argc, char **argv){
             unsigned int g;
             unsigned int b;
         } Pixel;
-        Pixel* pixels = (int*)malloc(imageSize * 3 * sizeof(Pixel));
+        Pixel* pixels = (Pixel*)malloc(imageSize * 3 * sizeof(Pixel));
         if (pixels == NULL) {
             // Fehler beim Allizieren des Speichers
             printf("Fehler beim Allozieren des Speichers.\n");
@@ -190,8 +190,22 @@ int main(int argc, char **argv){
         fclose(inputFile);
         
         int* red = (int*)malloc(imageSize * sizeof(int));
+        if (red == NULL) {
+            // Fehler beim Allizieren des Speichers
+            printf("Fehler beim Allozieren des Speichers.\n");
+            return 1;
+        }
         int* blue = (int*)malloc(imageSize * sizeof(int));
+        if (blue == NULL) {
+            // Fehler beim Allizieren des Speichers
+            printf("Fehler beim Allozieren des Speichers.\n");
+            return 1;
+        }
         int* green = (int*)malloc(imageSize * sizeof(int));
+        if (green == NULL) {
+            // Fehler beim Allizieren des Speichers
+            printf("Fehler beim Allozieren des Speichers.\n");
+        }
         for (int i = 0; i < imageSize; i++) {
             red[i] = pixels[i].r;
             blue[i] = pixels[i].b;
@@ -211,8 +225,18 @@ int main(int argc, char **argv){
             return 0;
         }
         int* temp = (int*)malloc(imageSize * sizeof(int));
+        if (temp == NULL) {
+            // Fehler beim Allizieren des Speichers
+            printf("Fehler beim Allozieren des Speichers.\n");
+            return 1;
+        }
         int* result = (int*)malloc(imageSize * scaling * scaling);
-        grayscale(pixels, temp, width, height, a, b, c);
+        if (result == NULL) {
+            // Fehler beim Allizieren des Speichers
+            printf("Fehler beim Allozieren des Speichers.\n");
+            return 1;
+        }
+        grayscale(red, blue, green, temp, width, height, a, b, c);
         free(pixels);
         free(red);
         free(blue);
