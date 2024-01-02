@@ -208,8 +208,8 @@ int main(int argc, char **argv){
         }
         for (int i = 0; i < imageSize; i++) {
             red[i] = pixels[i].r;
-            green[i] = pixels[i]g;
-            blue[i] = pixels[i].bg;
+            green[i] = pixels[i].g;
+            blue[i] = pixels[i].b;
         }
 
         // Berechnung
