@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "stdio.h"
 
-void intpolcalculation(int* intArray, u_int8_t* allozspeicher, int hoehe, int breite, int factor) {
+void intpolcalculation(u_int8_t* intArray, u_int8_t* allozspeicher, int hoehe, int breite, int factor) {
     // Einzelne Sektoren werden bearbeitet
     for(int sektorh = 0; sektorh < hoehe;sektorh++) {
         for (int sektorb = 0; sektorb < breite; sektorb++) {
@@ -48,12 +48,19 @@ void main() {
     int hoehe = 2;
     int breite = 4;
     int factor = 3;
-    int intArray[8] = {1, 75, 200, 75, 45, 210, 156, 78};
+    u_int8_t intArray[8] = {1, 75, 200, 75, 45, 210, 156, 78};
     u_int8_t allozspeicher[hoehe * breite * factor * factor];
     //for (int i = 0; i < hoehe * breite * factor * factor; ++i) {
         // -1 als Fehlerwert, dass mans schöner sehen kann
         //allozspeicher[i] = -1;
     //}
+
+    /*
+     *    1  75  200 75
+     *    45 210 156 78
+     */
+
+
     intpolcalculation(intArray,allozspeicher,hoehe,breite,factor);
     for (int i = 0; i < hoehe * breite * factor * factor; ++i) {
         if(i % (breite * factor) == 0) {
