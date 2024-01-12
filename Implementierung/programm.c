@@ -10,13 +10,16 @@
 void grayscale(uint8_t* img, uint8_t* result, int width, int height, float a, float b, float c) {
     // Graustufenkonvertierung
     printf("grayscale\n");
-    for (size_t i = 0; i < height * width * 3; i += 3) {
+    int i = 0;
+    int j = 0;
+    while (i < height * width * 3) {
         uint8_t R = img[i];
         uint8_t G = img[i + 1];
         uint8_t B = img[i + 2];
         uint8_t D = round(R * a + G * b + B * c);
-        result[i / 3] = D;
-        
+        result[j] = D;
+        i += 3;
+        j += 1;
     }
 }
 void interpolation(uint8_t* intArray, uint8_t* allozspeicher, int breite, int hoehe, int factor) {
@@ -147,12 +150,6 @@ int main(int argc, char **argv){
             c = c / sum;
         }
         printf("Die Koeffizienten a, b, c: %f %f %f\n", a, b, c); // Testen der Koeffizientenberechnung
-        sum = a + b + c;
-        if (sum <= 0) {
-            // Fehler, wegen ungültigen Koeffizienten
-            fprintf(stderr, "Die verwendeten Koeffizienten a, b, c sind ungültig");
-            return 1;
-        }
 
         // Prüfung der Skalierungsfaktor
         if (scaling < 1) { scaling = 1; }
@@ -266,7 +263,6 @@ int main(int argc, char **argv){
         grayscale(pixels, temp, width, height, a, b, c);
         printf("grayscale erfolgreich\n");
         if (scaling == 1) {
-            // Abspeichern
             FILE* outputFile = fopen(outputFileName, "wb");
             if (outputFile == NULL) {
                 fprintf(stderr, "Ungültiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
@@ -277,30 +273,21 @@ int main(int argc, char **argv){
             fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
             fprintf(outputFile, "255\n");
             fwrite(temp, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
-            for (int i = 0; i < height; i++) {
-                for (int j = 0; j < width; j++) {
-                    uint8_t res = temp[i*width+j];
-                    //printf("%u ", res);
-                }
-                //printf("\n");
-            }
             fclose(outputFile);
         } else {
-            interpolation(temp, result, width, height, scaling);
-        }
-        
-        // Abspeichern
-        FILE* outputFile = fopen(outputFileName, "wb");
-        if (outputFile == NULL) {
-            fprintf(stderr, "Ungültiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
+            // Abspeichern
+            FILE* outputFile = fopen(outputFileName, "wb");
+            if (outputFile == NULL) {
+                fprintf(stderr, "Ungültiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
+                fclose(outputFile);
+                return 1;
+            }
+            fprintf(outputFile, "P5\n");
+            fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
+            fprintf(outputFile, "255\n");
+            fwrite(result, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
             fclose(outputFile);
-            return 1;
         }
-        fprintf(outputFile, "P5\n");
-        fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
-        fprintf(outputFile, "255\n");
-        fwrite(result, sizeof(int), (width*scaling)*(height*scaling), outputFile);
-        fclose(outputFile);
         free(result);
         free(temp);
         free(pixels);
