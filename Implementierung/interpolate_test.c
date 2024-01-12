@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "stdio.h"
 
-bool intpolcalculation(int* intArray, int* allozspeicher, int hoehe, int breite, int factor) {
+void intpolcalculation(int* intArray, u_int8_t* allozspeicher, int hoehe, int breite, int factor) {
     // Einzelne Sektoren werden bearbeitet
     for(int sektorh = 0; sektorh < hoehe;sektorh++) {
         for (int sektorb = 0; sektorb < breite; sektorb++) {
@@ -26,7 +26,7 @@ bool intpolcalculation(int* intArray, int* allozspeicher, int hoehe, int breite,
                     // da wert x=0, y=0 immer den a-Wert ergibt kann dieser auch direkt eingetragen werden
                     // die berechnung füllt ja nur das quadrat für eins kleiner von s aus, dass keine Werte doppelt berechnet werden
                     if(x == 0 && y == 0) {
-                        allozspeicher[pos] = a;
+                        allozspeicher[pos] = (u_int8_t) a;
                         continue;
                     }
 
@@ -37,20 +37,19 @@ bool intpolcalculation(int* intArray, int* allozspeicher, int hoehe, int breite,
                     //printf("[%i;%i] %i - %i\n",x,y,pos,polwert);
 
                     //speichere ab
-                    allozspeicher[pos] = polwert;
+                    allozspeicher[pos] = (u_int8_t) polwert;
                 }
             }
         }
     }
-    return true;
 }
 
 void main() {
     int hoehe = 2;
     int breite = 4;
     int factor = 3;
-    int intArray[8] = {34, 67, 123, 89, 45, 210, 156, 78};
-    int allozspeicher[hoehe * breite * factor * factor];
+    int intArray[8] = {1, 75, 200, 75, 45, 210, 156, 78};
+    u_int8_t allozspeicher[hoehe * breite * factor * factor];
     //for (int i = 0; i < hoehe * breite * factor * factor; ++i) {
         // -1 als Fehlerwert, dass mans schöner sehen kann
         //allozspeicher[i] = -1;
