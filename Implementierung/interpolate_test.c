@@ -4,8 +4,9 @@
 
 #include <stdbool.h>
 #include "stdio.h"
+#include "inttypes.h"
 
-void intpolcalculation(u_int8_t* intArray, u_int8_t* allozspeicher, int breite, int hoehe, int factor) {
+void intpolcalculation(uint8_t* intArray, uint8_t* allozspeicher, int breite, int hoehe, int factor) {
     // Einzelne Sektoren werden bearbeitet
     for(int sektorh = 0; sektorh < hoehe;sektorh++) {
         for (int sektorb = 0; sektorb < breite; sektorb++) {
@@ -26,7 +27,7 @@ void intpolcalculation(u_int8_t* intArray, u_int8_t* allozspeicher, int breite, 
                     // da wert x=0, y=0 immer den a-Wert ergibt kann dieser auch direkt eingetragen werden
                     // die berechnung füllt ja nur das quadrat für eins kleiner von s aus, dass keine Werte doppelt berechnet werden
                     if(x == 0 && y == 0) {
-                        allozspeicher[pos] = (u_int8_t) a;
+                        allozspeicher[pos] = (uint8_t) a;
                         continue;
                     }
 
@@ -37,7 +38,7 @@ void intpolcalculation(u_int8_t* intArray, u_int8_t* allozspeicher, int breite, 
                     //printf("[%i;%i] %i - %i\n",x,y,pos,polwert);
 
                     //speichere ab
-                    allozspeicher[pos] = (u_int8_t) polwert;
+                    allozspeicher[pos] = (uint8_t) polwert;
                 }
             }
         }
