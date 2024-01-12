@@ -106,33 +106,7 @@ int main(int argc, char **argv){
         printf("Skalierungsfaktor: %i\n", scaling);
         // oder doch mit Fehlermeldung abbrechen?
 
-        // Prüfung der Ausgabedateiname
-        // Die Zeichen \ / : * ? " < > | . sind in Dateinamen nicht erlaubt. 
-        // Quelle: https://verwaltung.uni-koeln.de/stabsstelle01/content/benutzerberatung/it_faq/windows/faqitems163122/index_ger.html
-        char* filename = outputFileName;
-        int length = strlen(outputFileName);
-        if (length == 0 || length > 255) {
-            // Dateiname zu lang oder nicht existierend
-            outputFileName = "output.pgm";
-        }
-        if (filename[0] == '.' || filename[length-1] == '.') {
-            // Dateiname darf nicht mit . beginnen oder enden
-            outputFileName = "output.pgm";
-        }
-        int whitespace = 1;
-        for (int i = 0; i < length; i++) {
-            if (filename[i] != ' ') {
-                int whitespace = 0;
-            }
-            if (filename[i] == '/' || filename[i] == '\\' || filename[i] == ':' || filename[i] == '*' || filename[i] == '?' || filename[i] == '"' || filename[i] == '<' || filename[i] == '>' || filename[i] == '|') {
-                // Dateiname enthält nicht erlaubte Zeichen
-                outputFileName = "output.pgm";
-            }
-        }
-        if (whitespace == 1) {
-            // Dateiname enthält nur Leerzeichen
-            outputFileName = "output.pgm";
-        }
+        
         printf("Ausgabedatei: %s\n", outputFileName);
         // oder doch mit Fehlermeldung abbrechen?
 
