@@ -86,11 +86,12 @@ void interpolate1(const uint8_t* img, size_t width, size_t height, float a, floa
     gentable(a, tableA);
     gentable(b, tableB);
     gentable(c, tableC);
+    size_t size = height * width;
     if (scale_factor == 1) {
-        for (size_t i = 0; i < height * width; ++i) {
-            uint8_t R = img[i * 3];
-            uint8_t G = img[i * 3 + 1];
-            uint8_t B = img[i * 3 + 2];
+        for (size_t i = 0; i < size; ++i) {
+            uint8_t R = img[i];
+            uint8_t G = img[size + i];
+            uint8_t B = img[size + size + i];
             
             // Lookup precomputed values from tables
             int16_t weightedSum = tableA[R] + tableB[G] + tableC[B];
@@ -98,10 +99,10 @@ void interpolate1(const uint8_t* img, size_t width, size_t height, float a, floa
         }
         return;
     }
-    for (size_t i = 0; i < height * width; ++i) {
-        uint8_t R = img[i * 3];
-        uint8_t G = img[i * 3 + 1];
-        uint8_t B = img[i * 3 + 2];
+    for (size_t i = 0; i < size; ++i) {
+        uint8_t R = img[i];
+        uint8_t G = img[size + i];
+        uint8_t B = img[size + size + i];
             
         // Lookup precomputed values from tables
         int16_t weightedSum = tableA[R] + tableB[G] + tableC[B];
@@ -557,9 +558,9 @@ int main(int argc, char **argv){
             uint8_t g;
             uint8_t b;
         } Pixel;
-        Pixel* pixels = (Pixel*)malloc(imageSize * 3 * sizeof(Pixel));
+        Pixel* pixels = (Pixel*)malloc(imageSize * sizeof(Pixel));
         fgetc(inputFile); // new line character
-        fread(pixels, sizeof(Pixel), imageSize*3, inputFile);
+        fread(pixels, sizeof(Pixel), imageSize, inputFile);
         fclose(inputFile);
         //printf("Berechnung startet\n");
 
@@ -596,8 +597,8 @@ int main(int argc, char **argv){
         // img speichert zuerst alle r-value, dann alle g-value und zuletzt alle b-value
         for (int i = 0; i < imageSize; i++) {
             img[i] = (uint8_t) pixels[i].r;
-            img[i+imageSize] = pixels[i].g;
-            img[i+imageSize+imageSize] = pixels[i].b;
+            img[i+imageSize] = (uint8_t) pixels[i].g;
+            img[i+imageSize+imageSize] = (uint8_t) pixels[i].b;
         }
         
         // Berechnung
