@@ -10,7 +10,7 @@
 void grayscale(uint8_t* img, uint8_t* temp, int width, int height, float a, float b, float c) {
     // Graustufenkonvertierung
     printf("grayscale\n");
-    
+
     int i = 0;
     int j = 0;
     while (i < height * width * 3) {
@@ -26,7 +26,7 @@ void grayscale(uint8_t* img, uint8_t* temp, int width, int height, float a, floa
 
 void interpolation(uint8_t* intArray, uint8_t* allozspeicher, int breite, int hoehe, int factor) {
     // Interpolation
-    
+
     // Einzelne Sektoren werden bearbeitet
     for(int sektorh = 0; sektorh < hoehe;sektorh++) {
         for (int sektorb = 0; sektorb < breite; sektorb++) {
@@ -82,55 +82,55 @@ int main(int argc, char **argv){
     int scaling = 1; // Soll die Skalierungsfaktor einen Integer sein?
 
     // Kommandozeilen-Argumente parsen
-     static struct option long_options[] = {
-        {"coeffs", required_argument, 0, 'c'},
-        {"help", no_argument, 0, 'h'},
-        {0, 0, 0, 0}
+    static struct option long_options[] = {
+            {"coeffs", required_argument, 0, 'c'},
+            {"help", no_argument, 0, 'h'},
+            {0, 0, 0, 0}
     };
     int* option_index = 0;
     while ((option = getopt_long(argc, argv, "VBof:h", long_options, option_index)) != -1) {
         switch (option) {
             case 0:
-            sscanf(optarg, "%f,%f,%f", &a, &b, &c);
-            break;
-        case 'V':
-            implementation = atoi(optarg);
-            break;
-        case 'B':
-            benchmark = 1;
-            repetitions = atoi(optarg);
-            break;
-        case 'o':
-            outputFileName = optarg;
-            break;
-        case 'c':
-            sscanf(optarg, "%f,%f,%f", &a, &b, &c);
-            //printf("a, b, c: %f %f %f\n", a, b, c);  
-            break; 
-        case 'f':
-            // Skalierungsfaktor
-            scaling = atoi(optarg);
-            break;
-        case 'h':
-            // Beschreibung aller Optionen des Programms und Verwendungsbeispiele werden ausgegeben und das Programm danach beendet
-            // Verwendungsbeispiele fehlen !!!
-            printf("Beschreibung der Optionen:\n");
-            printf("-V<Zahl> : Die Implementierung, die verwendet werden soll. Hierbei wird mit -V 0 die Hauptimplementierung verwendet. Wenn diese Option nicht gesetzt wird, wird ebenfalls die Hauptimplementierung ausgefuehrt werden.\n");
-            printf("-B<Zahl> : Falls gesetzt, wird die Laufzeit der angegebenen Implementierung gemessen und ausgegeben. Das optionale Argument dieser Option gibt die Anzahl an Wiederholungen des Funktionsaufrufs an.\n");
-            printf("<Dateiname> : Positionales Argument für die Eingabedatei.\n");
-            printf("-o<Dateiname> : Ausgabedatei.\n");
-            printf("--coeffs<FP Zahl>,<FP Zahl>,<FP Zahl> : Die Koeffizienten der Graustufenkonvertierung a, b und c. Falls diese Option nicht gesetzt wird, werden die Standardwerte 0.299, 0.587 und 0.114 verwendet.\n");
-            printf("-f<Zahl> : Skalierungsfaktor.\n");
-            printf("-h|--help : Eine Beschreibung aller Optionen des Programms und Verwendungsbeispiele.\n");
-            exit(0);            
-        default:
-            // Fehlermehldung wegen fehlender Eingaben
-            fprintf(stderr, "Es fehlen alle noetigen Parameter. Für weitere Informationen verwenden Sie bitte die Option -h|--help.");
-            exit(1);
+                sscanf(optarg, "%f,%f,%f", &a, &b, &c);
+                break;
+            case 'V':
+                implementation = atoi(optarg);
+                break;
+            case 'B':
+                benchmark = 1;
+                repetitions = atoi(optarg);
+                break;
+            case 'o':
+                outputFileName = optarg;
+                break;
+            case 'c':
+                sscanf(optarg, "%f,%f,%f", &a, &b, &c);
+                //printf("a, b, c: %f %f %f\n", a, b, c);
+                break;
+            case 'f':
+                // Skalierungsfaktor
+                scaling = atoi(optarg);
+                break;
+            case 'h':
+                // Beschreibung aller Optionen des Programms und Verwendungsbeispiele werden ausgegeben und das Programm danach beendet
+                // Verwendungsbeispiele fehlen !!!
+                printf("Beschreibung der Optionen:\n");
+                printf("-V<Zahl> : Die Implementierung, die verwendet werden soll. Hierbei wird mit -V 0 die Hauptimplementierung verwendet. Wenn diese Option nicht gesetzt wird, wird ebenfalls die Hauptimplementierung ausgefuehrt werden.\n");
+                printf("-B<Zahl> : Falls gesetzt, wird die Laufzeit der angegebenen Implementierung gemessen und ausgegeben. Das optionale Argument dieser Option gibt die Anzahl an Wiederholungen des Funktionsaufrufs an.\n");
+                printf("<Dateiname> : Positionales Argument für die Eingabedatei.\n");
+                printf("-o<Dateiname> : Ausgabedatei.\n");
+                printf("--coeffs<FP Zahl>,<FP Zahl>,<FP Zahl> : Die Koeffizienten der Graustufenkonvertierung a, b und c. Falls diese Option nicht gesetzt wird, werden die Standardwerte 0.299, 0.587 und 0.114 verwendet.\n");
+                printf("-f<Zahl> : Skalierungsfaktor.\n");
+                printf("-h|--help : Eine Beschreibung aller Optionen des Programms und Verwendungsbeispiele.\n");
+                exit(0);
+            default:
+                // Fehlermehldung wegen fehlender Eingaben
+                fprintf(stderr, "Es fehlen alle noetigen Parameter. Für weitere Informationen verwenden Sie bitte die Option -h|--help.");
+                exit(1);
         }
     }
-    
-        
+
+
     if (optind < argc) {
         inputFileName = argv[optind];
     } else {
@@ -139,7 +139,7 @@ int main(int argc, char **argv){
         return 1;
     }
 
-     //Eigentliches Programm
+    //Eigentliches Programm
     if (implementation == 0) {
         // Hauptimplementation
         printf("Hauptimplementation\n");
@@ -210,7 +210,7 @@ int main(int argc, char **argv){
             return 1;
         }
         printf("Eingabedatei: %s\n", inputFileName);
-    
+
         FILE* inputFile = fopen(inputFileName, "rb");
         if (inputFile == NULL) {
             // Fehler beim Öffnen des Bildes
@@ -268,12 +268,19 @@ int main(int argc, char **argv){
             fclose(inputFile);
             return 1;
         }
+<<<<<<< HEAD
         if (maxColorValue == 0) {
             // Fehlermeldung wegen falsches Bildformat
             fprintf(stderr, "Ungueltiger Maximalwert für die Farben. Null als Wer ist nicht erlaubt.\n");
             fclose(inputFile);
             return 1;
         }
+=======
+
+        //width = 256;
+        //height = 256;
+
+>>>>>>> ac1b899441dce0d2ec6752bbc13ba1921a95df58
         //printf("Header stimmt vollständig\n");
         int imageSize = width * height;
         uint8_t* pixels = (uint8_t*)malloc(imageSize * 3 * sizeof(uint8_t));
@@ -307,7 +314,7 @@ int main(int argc, char **argv){
             printf("Fehler beim Allozieren des Speichers.\n");
             return 1;
         }
-        uint8_t* result = (uint8_t*)malloc(imageSize * scaling * scaling);
+        uint8_t* result = (uint8_t*)malloc(imageSize * scaling * scaling * sizeof(uint8_t));
         if (result == NULL) {
             // Fehler beim Allizieren des Speichers
             printf("Fehler beim Allozieren des Speichers.\n");
@@ -330,6 +337,21 @@ int main(int argc, char **argv){
             fwrite(temp, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
             fclose(outputFile);
         } else {
+<<<<<<< HEAD
+=======
+            // void interpolation(uint8_t* intArray, uint8_t* allozspeicher, int breite, int hoehe, int factor) {
+            interpolation(temp,result,width,height,scaling);
+            // Abspeichern
+            FILE* outputFile = fopen(outputFileName, "wb");
+            if (outputFile == NULL) {
+                fprintf(stderr, "Ungueltiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
+                fclose(outputFile);
+                return 1;
+            }
+            fprintf(outputFile, "P5\n");
+            fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
+            fprintf(outputFile, "255\n");
+>>>>>>> ac1b899441dce0d2ec6752bbc13ba1921a95df58
             fwrite(result, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
             fclose(outputFile);
         }
