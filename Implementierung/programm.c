@@ -326,14 +326,8 @@ int main(int argc, char **argv){
         fprintf(outputFile, "P5\n");
         fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
         fprintf(outputFile, "255\n");
-        
-        if (scaling == 1) {
-            fwrite(temp, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
-            fclose(outputFile);
-        } else {
-            fwrite(result, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
-            fclose(outputFile);
-        }
+        fwrite(result, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
+        fclose(outputFile);
         free(result);
         free(temp);
         free(pixels);

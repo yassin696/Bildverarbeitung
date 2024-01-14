@@ -171,14 +171,14 @@ int main(int argc, char **argv){
             {"help", no_argument, 0, 'h'},
             {0, 0, 0, 0}
     };
-    while ((option = getopt_long(argc, argv, "VBof:h", long_options, NULL)) != -1) {
+    while ((option = getopt_long(argc, argv, "V:B:o:f:h", long_options, NULL)) != -1) {
         switch (option) {
             case 0:
                 sscanf(optarg, "%f,%f,%f", &a, &b, &c);
                 break;
             case 'V':
                 implementation = atoi(optarg);
-                printf("Implementierung: %i\n", implementation);
+                //printf("Implementierung: %i\n", implementation);
                 break;
             case 'B':
                 benchmark = 1;
