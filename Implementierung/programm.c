@@ -23,6 +23,7 @@ void grayscale(uint8_t* img, uint8_t* temp, int width, int height, float a, floa
         j += 1;
     }
 }
+
 void interpolation(uint8_t* intArray, uint8_t* allozspeicher, int breite, int hoehe, int factor) {
     // Interpolation
     
@@ -149,7 +150,8 @@ int main(int argc, char **argv){
             a = 0.299;
             b = 0.587;
             c = 0.114;
-            printf("Die Koeffizienten a, b, c in der Summe sind kleiner gleich 0, deshalb werden Standardwerte verwendet.");
+            sum = 1.0;
+            printf("Die Koeffzienten a, b und c sind in der Summe kleiner gleich 0. Deshalb werden Standardwerte verwendet.\n");
         }
         if (sum != 1) {
             a = a / sum;
@@ -225,14 +227,50 @@ int main(int argc, char **argv){
             return 1;
         }
         //printf("Header erste Zeile stimmt\n");
-        int width = 0;
-        int height = 0;
+        int ch;
+        while(1) {
+            while((ch=fgetc(inputFile)) == ' '); // whitespace überspringen
+            if (ch == '#') {
+                while((ch=fgetc(inputFile)) != '\n'); // Kommentar überspringen
+            } else {
+                ungetc(ch, inputFile); //letzte gelesene Zeichen zurückgehen
+                break;
+            }
+        }
+        int width;
+        fscanf(inputFile, "%d", &width);
+        while(1) {
+            while((ch=fgetc(inputFile)) == ' '); // whitespace überspringen
+            if (ch == '#') {
+                while((ch=fgetc(inputFile)) != '\n'); // Kommentar überspringen
+            } else {
+                ungetc(ch, inputFile); //letzte gelesene Zeichen zurückgehen
+                break;
+            }
+        }
+        int height;
+        fscanf(inputFile, "%d", &height);
+        while(1) {
+            while((ch=fgetc(inputFile)) == ' '); // whitespace überspringen
+            if (ch == '#') {
+                while((ch=fgetc(inputFile)) != '\n'); // Kommentar überspringen
+            } else {
+                ungetc(ch, inputFile); //letzte gelesene Zeichen zurückgehen
+                break;
+            }
+        }
         int maxColorValue;
-        fscanf(inputFile, "%d %d", &width, &height);
         fscanf(inputFile, "%d", &maxColorValue);
+        printf("Width, height, maxColorValue: %i, %i, %i\n", width, height, maxColorValue);
         if (maxColorValue > 255) {
             // Fehlermeldung wegen falsches Bildformat
             fprintf(stderr, "Ungueltiger Maximalwert für die Farben. Es wird ein Wert von 255 erwartet.\n");
+            fclose(inputFile);
+            return 1;
+        }
+        if (maxColorValue == 0) {
+            // Fehlermeldung wegen falsches Bildformat
+            fprintf(stderr, "Ungueltiger Maximalwert für die Farben. Null als Wer ist nicht erlaubt.\n");
             fclose(inputFile);
             return 1;
         }
@@ -245,6 +283,7 @@ int main(int argc, char **argv){
             fclose(inputFile);
             return 1;
         }
+        
         fgetc(inputFile); // new line character
         fread(pixels, sizeof(uint8_t), imageSize*3, inputFile);
         fclose(inputFile);
@@ -276,29 +315,21 @@ int main(int argc, char **argv){
         }
         grayscale(pixels, temp, width, height, a, b, c);
         //printf("grayscale erfolgreich\n");
+
+        // Abspeichern
+        FILE* outputFile = fopen(outputFileName, "wb");
+        if (outputFile == NULL) {
+            fprintf(stderr, "Ungueltiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
+            fclose(outputFile);
+            return 1;
+        }
+        fprintf(outputFile, "P5\n");
+        fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
+        fprintf(outputFile, "255\n");
         if (scaling == 1) {
-            FILE* outputFile = fopen(outputFileName, "wb");
-            if (outputFile == NULL) {
-                fprintf(stderr, "Ungueltiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
-                fclose(outputFile);
-                return 1;
-            }
-            fprintf(outputFile, "P5\n");
-            fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
-            fprintf(outputFile, "255\n");
             fwrite(temp, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
             fclose(outputFile);
         } else {
-            // Abspeichern
-            FILE* outputFile = fopen(outputFileName, "wb");
-            if (outputFile == NULL) {
-                fprintf(stderr, "Ungueltiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
-                fclose(outputFile);
-                return 1;
-            }
-            fprintf(outputFile, "P5\n");
-            fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
-            fprintf(outputFile, "255\n");
             fwrite(result, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
             fclose(outputFile);
         }

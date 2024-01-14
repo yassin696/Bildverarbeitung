@@ -29,6 +29,6 @@ void grayscale(const uint8_t* img, int width, int height, float a, float b, floa
         int16_t weightedSum = tableA[R] + tableB[G] + tableC[B];
 
         
-        result[i] = (uint8_t)(weightedSum );
+        result[i] = (uint8_t)(weightedSum);
     }
 }
