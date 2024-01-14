@@ -268,19 +268,12 @@ int main(int argc, char **argv){
             fclose(inputFile);
             return 1;
         }
-<<<<<<< HEAD
         if (maxColorValue == 0) {
             // Fehlermeldung wegen falsches Bildformat
             fprintf(stderr, "Ungueltiger Maximalwert für die Farben. Null als Wer ist nicht erlaubt.\n");
             fclose(inputFile);
             return 1;
         }
-=======
-
-        //width = 256;
-        //height = 256;
-
->>>>>>> ac1b899441dce0d2ec6752bbc13ba1921a95df58
         //printf("Header stimmt vollständig\n");
         int imageSize = width * height;
         uint8_t* pixels = (uint8_t*)malloc(imageSize * 3 * sizeof(uint8_t));
@@ -333,25 +326,11 @@ int main(int argc, char **argv){
         fprintf(outputFile, "P5\n");
         fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
         fprintf(outputFile, "255\n");
+        
         if (scaling == 1) {
             fwrite(temp, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
             fclose(outputFile);
         } else {
-<<<<<<< HEAD
-=======
-            // void interpolation(uint8_t* intArray, uint8_t* allozspeicher, int breite, int hoehe, int factor) {
-            interpolation(temp,result,width,height,scaling);
-            // Abspeichern
-            FILE* outputFile = fopen(outputFileName, "wb");
-            if (outputFile == NULL) {
-                fprintf(stderr, "Ungueltiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
-                fclose(outputFile);
-                return 1;
-            }
-            fprintf(outputFile, "P5\n");
-            fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
-            fprintf(outputFile, "255\n");
->>>>>>> ac1b899441dce0d2ec6752bbc13ba1921a95df58
             fwrite(result, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
             fclose(outputFile);
         }
