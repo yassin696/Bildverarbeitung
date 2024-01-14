@@ -7,9 +7,10 @@
 #include <math.h>
 
 
-void grayscale(uint8_t* img, uint8_t* result, int width, int height, float a, float b, float c) {
+void grayscale(uint8_t* img, uint8_t* temp, int width, int height, float a, float b, float c) {
     // Graustufenkonvertierung
     printf("grayscale\n");
+    
     int i = 0;
     int j = 0;
     while (i < height * width * 3) {
@@ -17,7 +18,7 @@ void grayscale(uint8_t* img, uint8_t* result, int width, int height, float a, fl
         uint8_t G = img[i + 1];
         uint8_t B = img[i + 2];
         uint8_t D = round(R * a + G * b + B * c);
-        result[j] = D;
+        temp[j] = D;
         i += 3;
         j += 1;
     }
@@ -85,7 +86,7 @@ int main(int argc, char **argv){
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
-    int option_index = 0;
+    int* option_index = 0;
     while ((option = getopt_long(argc, argv, "VBof:h", long_options, option_index)) != -1) {
         switch (option) {
             case 0:
@@ -113,7 +114,7 @@ int main(int argc, char **argv){
             // Beschreibung aller Optionen des Programms und Verwendungsbeispiele werden ausgegeben und das Programm danach beendet
             // Verwendungsbeispiele fehlen !!!
             printf("Beschreibung der Optionen:\n");
-            printf("-V<Zahl> : Die Implementierung, die verwendet werden soll. Hierbei soll mit -V 0 Ihre Hauptimplementierung verwendet werden. Wenn diese Option nicht gesetzt wird, soll ebenfalls die Hauptimplementierung ausgeführt werden.\n");
+            printf("-V<Zahl> : Die Implementierung, die verwendet werden soll. Hierbei wird mit -V 0 die Hauptimplementierung verwendet. Wenn diese Option nicht gesetzt wird, wird ebenfalls die Hauptimplementierung ausgefuehrt werden.\n");
             printf("-B<Zahl> : Falls gesetzt, wird die Laufzeit der angegebenen Implementierung gemessen und ausgegeben. Das optionale Argument dieser Option gibt die Anzahl an Wiederholungen des Funktionsaufrufs an.\n");
             printf("<Dateiname> : Positionales Argument für die Eingabedatei.\n");
             printf("-o<Dateiname> : Ausgabedatei.\n");
@@ -123,7 +124,7 @@ int main(int argc, char **argv){
             exit(0);            
         default:
             // Fehlermehldung wegen fehlender Eingaben
-            fprintf(stderr, "Es fehlen alle nötigen Parameter. Für weitere Informationen verwenden Sie bitte die Option -h|--help.");
+            fprintf(stderr, "Es fehlen alle noetigen Parameter. Für weitere Informationen verwenden Sie bitte die Option -h|--help.");
             exit(1);
         }
     }
@@ -144,6 +145,12 @@ int main(int argc, char **argv){
 
         // Berechnung und Prüfung der Koeffizienten a, b, c
         float sum = a + b + c;
+        if (sum <= 0) {
+            a = 0.299;
+            b = 0.587;
+            c = 0.114;
+            printf("Die Koeffizienten a, b, c in der Summe sind kleiner gleich 0, deshalb werden Standardwerte verwendet.");
+        }
         if (sum != 1) {
             a = a / sum;
             b = b / sum;
@@ -152,7 +159,10 @@ int main(int argc, char **argv){
         printf("Die Koeffizienten a, b, c: %f %f %f\n", a, b, c); // Testen der Koeffizientenberechnung
 
         // Prüfung der Skalierungsfaktor
-        if (scaling < 1) { scaling = 1; }
+        if (scaling < 1) {
+            printf("Skalierungsfaktor kleiner als 1, deshalb wird Skalierungsfaktor auf 1 gesetzt.");
+            scaling = 1;
+        }
         printf("Skalierungsfaktor: %i\n", scaling);
         // oder doch mit Fehlermeldung abbrechen?
 
@@ -163,24 +173,28 @@ int main(int argc, char **argv){
         int length = strlen(outputFileName);
         if (length == 0 || length > 255) {
             // Dateiname zu lang oder nicht existierend
+            printf("Dateiname ist zu lang oder nicht existierend, deshalb wird output.pgm als Ausgabedateiname verwendet.");
             outputFileName = "output.pgm";
         }
         if (filename[0] == '.' || filename[length-1] == '.') {
             // Dateiname darf nicht mit . beginnen oder enden
+            printf("Dateiname darf nicht mit . beginnen oder enden, deshalb wird output.pgm als Ausgabedateiname verwendet.");
             outputFileName = "output.pgm";
         }
         int whitespace = 1;
         for (int i = 0; i < length; i++) {
             if (filename[i] != ' ') {
-                int whitespace = 0;
+                whitespace = 0;
             }
             if (filename[i] == '/' || filename[i] == '\\' || filename[i] == ':' || filename[i] == '*' || filename[i] == '?' || filename[i] == '"' || filename[i] == '<' || filename[i] == '>' || filename[i] == '|') {
                 // Dateiname enthält nicht erlaubte Zeichen
+                printf("Dateiname enthaelt nicht erlaubte Zeichen, deshalb wird output.pgm als Ausgabedateiname verwendet.");
                 outputFileName = "output.pgm";
             }
         }
         if (whitespace == 1) {
             // Dateiname enthält nur Leerzeichen
+            printf("Dateiname enthaelt nur Leerzeichen, deshalb wird output.pgm als Ausgabedateiname verwendet.");
             outputFileName = "output.pgm";
         }
         printf("Ausgabedatei: %s\n", outputFileName);
@@ -190,7 +204,7 @@ int main(int argc, char **argv){
         if (strcmp(strrchr(inputFileName, '\0') - 4, ".ppm") != 0) {
             // Die Eingabedatei endet nicht mit  ".ppm" -> falsches Eingabeformat
             printf("Test failed here \n");
-            fprintf(stderr, "Ungültiges Dateiformat. Es wird ein PPM-Bild erwartet.\n");
+            fprintf(stderr, "Ungueltiges Dateiformat. Es wird ein PPM-Bild erwartet.\n");
             return 1;
         }
         printf("Eingabedatei: %s\n", inputFileName);
@@ -198,19 +212,19 @@ int main(int argc, char **argv){
         FILE* inputFile = fopen(inputFileName, "rb");
         if (inputFile == NULL) {
             // Fehler beim Öffnen des Bildes
-            fprintf(stderr, "Das angegebene Bild kann nicht geöffnet werden.");
+            fprintf(stderr, "Das angegebene Bild kann nicht geoeffnet werden.");
         }
-        printf("Bild kann geöffnet werden!\n");
+        //printf("Bild kann geoeffnet werden!\n");
         char magicNumber[3];
         fscanf(inputFile, "%s", magicNumber);
         if (strcmp(magicNumber, "P6") != 0) {
             // Fehlermeldung wegen falsches Bildformat
             printf("here\n");
-            fprintf(stderr, "Ungültiges Dateiformat. Es wird ein P6 PPM-Bild erwartet.\n");
+            fprintf(stderr, "Ungueltiges Dateiformat. Es wird ein P6 PPM-Bild erwartet.\n");
             fclose(inputFile);
             return 1;
         }
-        printf("Header erste Zeile stimmt\n");
+        //printf("Header erste Zeile stimmt\n");
         int width = 0;
         int height = 0;
         int maxColorValue;
@@ -218,11 +232,11 @@ int main(int argc, char **argv){
         fscanf(inputFile, "%d", &maxColorValue);
         if (maxColorValue > 255) {
             // Fehlermeldung wegen falsches Bildformat
-            fprintf(stderr, "Ungültiger Maximalwert für die Farben. Es wird ein Wert von 255 erwartet.\n");
+            fprintf(stderr, "Ungueltiger Maximalwert für die Farben. Es wird ein Wert von 255 erwartet.\n");
             fclose(inputFile);
             return 1;
         }
-        printf("Header stimmt vollständig\n");
+        //printf("Header stimmt vollständig\n");
         int imageSize = width * height;
         uint8_t* pixels = (uint8_t*)malloc(imageSize * 3 * sizeof(uint8_t));
         if (pixels == NULL) {
@@ -234,7 +248,7 @@ int main(int argc, char **argv){
         fgetc(inputFile); // new line character
         fread(pixels, sizeof(uint8_t), imageSize*3, inputFile);
         fclose(inputFile);
-        printf("Berechnung startet\n");
+        //printf("Berechnung startet\n");
 
         // Berechnung
         if (benchmark == 1) {
@@ -261,11 +275,11 @@ int main(int argc, char **argv){
             return 1;
         }
         grayscale(pixels, temp, width, height, a, b, c);
-        printf("grayscale erfolgreich\n");
+        //printf("grayscale erfolgreich\n");
         if (scaling == 1) {
             FILE* outputFile = fopen(outputFileName, "wb");
             if (outputFile == NULL) {
-                fprintf(stderr, "Ungültiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
+                fprintf(stderr, "Ungueltiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
                 fclose(outputFile);
                 return 1;
             }
@@ -278,7 +292,7 @@ int main(int argc, char **argv){
             // Abspeichern
             FILE* outputFile = fopen(outputFileName, "wb");
             if (outputFile == NULL) {
-                fprintf(stderr, "Ungültiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
+                fprintf(stderr, "Ungueltiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
                 fclose(outputFile);
                 return 1;
             }
