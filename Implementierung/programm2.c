@@ -72,17 +72,17 @@ void interpolate(const uint8_t* img, size_t width, size_t height, float a, float
 }
 
 
-void gentable(float coeff, int16_t* table) {
+void gentable(float coeff, uint8_t* table) {
     for (int i = 0; i < 256; ++i) {
-        table[i] = (int16_t)(i * coeff);
+        table[i] = (uint8_t)(i * coeff);
     }
 }
 
 void interpolate1(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
     // Graustufenkonvertierung
-    int16_t tableA[256];
-    int16_t tableB[256];
-    int16_t tableC[256];
+    uint8_t tableA[256];
+    uint8_t tableB[256];
+    uint8_t tableC[256];
     gentable(a, tableA);
     gentable(b, tableB);
     gentable(c, tableC);
@@ -94,8 +94,8 @@ void interpolate1(const uint8_t* img, size_t width, size_t height, float a, floa
             uint8_t B = img[size + size + i];
             
             // Lookup precomputed values from tables
-            int16_t weightedSum = tableA[R] + tableB[G] + tableC[B];
-            result[i] = (uint8_t)(weightedSum);
+            uint8_t weightedSum = tableA[R] + tableB[G] + tableC[B];
+            result[i] = weightedSum;
         }
         return;
     }
@@ -105,12 +105,12 @@ void interpolate1(const uint8_t* img, size_t width, size_t height, float a, floa
         uint8_t B = img[size + size + i];
             
         // Lookup precomputed values from tables
-        int16_t weightedSum = tableA[R] + tableB[G] + tableC[B];
-        tmp[i] = (uint8_t)(weightedSum);
+        uint8_t weightedSum = tableA[R] + tableB[G] + tableC[B];
+        tmp[i] = weightedSum;
     }
 
     // Interpolation
-
+size_t sf=scale_factor * scale_factor;
     // Einzelne Sektoren werden bearbeitet
     for(size_t sektorh = 0; sektorh < height;sektorh++) {
         for (size_t sektorb = 0; sektorb < width; sektorb++) {
@@ -138,7 +138,7 @@ void interpolate1(const uint8_t* img, size_t width, size_t height, float a, floa
                     // berechne Wert
                     int polwert = (a * (scale_factor-y) * (scale_factor-x) ) + ( c * y * ( scale_factor-x) ) + ( b * (scale_factor-y) * x ) + ( d * y * x );
                     // multipliziere mit (1 / s*s)
-                    polwert = polwert / (scale_factor * scale_factor);
+                    polwert = polwert / sf;
                     //printf("[%i;%i] %i - %i\n",x,y,pos,polwert);
 
                     //speichere ab
