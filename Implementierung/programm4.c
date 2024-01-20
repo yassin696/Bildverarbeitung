@@ -122,33 +122,28 @@ void interpolate_optimized1(const uint8_t* img, size_t width, size_t height, flo
 
 // framework
 // checking coefficients and precalculate them (a=a/(a+b+c), b=b/(a+b+c), c=c/(a+b+c))
-float* check_coefficients(float a, float b, float c) {
-    float sum = a + b + c;
+void check_coefficients(float* a, float* b, float* c) {
+    float sum = *a + *b + *c;
     if (sum <= 0) {
-        a = 0.299;
-        b = 0.587;
-        c = 0.114;
+        *a = 0.299;
+        *b = 0.587;
+        *c = 0.114;
         sum = 1.0;
         printf("The sum of a, b and c is smaller or equal 0. Therefore, the default value will be used.\n");
     }
     if (sum != 1) {
-         a = a / sum;
-         b = b / sum;
-          c = c / sum;
+        *a = *a / sum;
+        *b = *b / sum;
+        *c = *c / sum;
     }
-    static float  f[3];
-    f[0]=a; f[1]=b; f[2]=c;
-    float* ptr = f;
-    return ptr;
 }
 
 // checking scaling
-int check_scaling(int scaling) {
-    if (scaling < 1) {
+void check_scaling(int* scaling) {
+    if (*scaling < 1) {
         printf("The scale factor is smaller than 1, so the default value 2 will be used.\n");
-        scaling = 2;
+        *scaling = 2;
     }
-    return scaling;
 }
 
 // checking output filename
@@ -202,11 +197,9 @@ char* check_output(char* outputFileName) {
     return outputFileName;
 }
 
-
-
 // read ppm header - return 1 if the header is false
-// skip possible comments between the values that need to be read for the header
 void skip_comment(FILE *inputFile) {
+    // skip possible comments between the values that need to be read for the header
     int ch;
     fscanf(inputFile, " "); // skip withespace
     while ((ch = fgetc(inputFile)) == '#') { // comment begins
@@ -264,6 +257,24 @@ int read_ppm_header(FILE* inputFile, int* width, int* height, int* maxColorValue
     return 0;
 }
 
+// write ppm
+int write_ppm(char* outputFileName, int width, int height, int scaling, uint8_t* result) {
+    FILE* outputFile = fopen(outputFileName, "wb");
+    if (outputFile == NULL) {
+        // Error opening the outputfile 
+        perror("Error by opening the outputfile. For more information please use the option -h | --help.");
+        fclose(outputFile);
+        return 1;
+    }
+    fprintf(outputFile, "P5\n");
+    fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
+    fprintf(outputFile, "255\n");
+    fwrite(result, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
+    fclose(outputFile);
+    return 0;
+}
+
+
 // main - framework programm
 int main(int argc, char **argv){
     // declaration of variables
@@ -320,7 +331,7 @@ int main(int argc, char **argv){
                 exit(0);
             default:
                 // Error because of missing entries
-                fprintf(stderr, "All necessary parameters are missing. For more information please use the option -h | --help.\n");
+                fprintf(stderr, "All necessary parameters are missing or wrong use of parameters. For more information please use the option -h | --help.\n");
                 exit(1);
         }
     }
@@ -340,17 +351,16 @@ int main(int argc, char **argv){
         printf("Standard implementation\n");
 
         // Checking and calculating of coefficients a, b, c (a=a/(a+b+c), b=b/(a+b+c), c=c/(a+b+c))
-        float* f = check_coefficients(a, b, c);
-        a=f[0], b=f[1], c=f[2];
+        check_coefficients(&a, &b, &c);
         printf("The coefficients a, b, c: %f %f %f\n", a, b, c); // test coefficients
 
         // Checking scale_factor
-        scaling = check_scaling(scaling);
-        printf("Scaling factor: %i\n", scaling);
+        check_scaling(&scaling);
+        printf("Scaling factor: %i\n", scaling); // test scale_factor 
         
         // Checking output filename
         outputFileName = check_output(outputFileName);
-        printf("Output Filename: %s\n", outputFileName);
+        printf("Output Filename: %s\n", outputFileName); // test outputfilename
 
         // check inputfile 
         if (strcmp(strrchr(inputFileName, '\0') - 4, ".ppm") != 0) {
@@ -368,12 +378,13 @@ int main(int argc, char **argv){
             perror("The giving picutre can not be opened. For more information please use the option -h | --help");
             return 1;
         }
-        int width, height, maxColorValue;
+        int width; int height; int maxColorValue;
         if (read_ppm_header(inputFile, &width, &height, &maxColorValue) == 1) {
             return 1;
         }
-        printf("Width, height, maxColorValue: %i, %i, %i\n", width, height, maxColorValue);
+        //printf("Width, height, maxColorValue: %i, %i, %i\n", *(width), *height, *maxColorValue);
 
+        // read the picture
         int imageSize = width * height;
         uint8_t* pixels = (uint8_t*)malloc(imageSize * 3 * sizeof(uint8_t));
         if (pixels == NULL) {
@@ -382,12 +393,24 @@ int main(int argc, char **argv){
             fclose(inputFile);
             return 1;
         }
-        
-        //fgetc(inputFile); // new line character
+        fgetc(inputFile); // new line character after end of the header
         fread(pixels, sizeof(uint8_t), imageSize*3, inputFile);
         fclose(inputFile);
-        //printf("Berechnung startet\n");
-
+        // allocating memories 
+        uint8_t* temp = (uint8_t*)malloc((imageSize * sizeof(uint8_t)) + (imageSize * scaling * scaling * sizeof(uint8_t)));
+        if (temp == NULL) {
+            // Error by allocating memory
+            perror("Error by allocating memory");
+            return 1;
+        }
+        uint8_t* result = temp + (imageSize * sizeof(uint8_t));
+        if (result == NULL) {
+            // Error by allocating memory
+            perror("Error by allocating memory");
+            return 1;
+        }
+        // result is a part of the allocated memory for temp. The interpolated picture will be saved by result, the grayscale by temp
+        
         // Calculation
         if (benchmark == 1) {
             // measuaring duration
@@ -399,39 +422,23 @@ int main(int argc, char **argv){
             printf("Times of repetitions: %d \n", repetitions);
             return 0;
         }
-        uint8_t* temp = (uint8_t*)malloc(imageSize * sizeof(uint8_t));
-        if (temp == NULL) {
-            // Error by allocating memory
-            perror("Error by allocating memory");
-            return 1;
-        }
-        uint8_t* result = (uint8_t*)malloc(imageSize * scaling * scaling * sizeof(uint8_t));
-        if (result == NULL) {
-            // Error by allocating memory
-            perror("Error by allocating memory");
-            return 1;
-        }
         
-        // Calculation 
+        // grayscale and interpolation  
         interpolate(pixels, width, height, a, b, c, scaling, temp, result);
-
-        // Saving the result picture 
-        FILE* outputFile = fopen(outputFileName, "wb");
-        if (outputFile == NULL) {
-            // Error opening the outputfile 
-            perror("Error by opening the outputfile. For more information please use the option -h | --help.");
-            fclose(outputFile);
-            return 1;
-        }
-        fprintf(outputFile, "P5\n");
-        fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
-        fprintf(outputFile, "255\n");
-        fwrite(result, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
-        fclose(outputFile);
-        free(result);
-        free(temp);
         free(pixels);
 
+        // Saving the result picture 
+        if (scaling == 1) {
+            if (write_ppm(outputFileName, width, height, scaling, temp) == 1) {
+                return 1;
+            }
+        } else {
+            if (write_ppm(outputFileName, width, height, scaling, result) == 1) { 
+                return 1;
+            }
+        }
+        free(temp);
+        
     } else if (implementation == 1) {
         printf("Grayscale optimiert durch Lookup\n");
 
