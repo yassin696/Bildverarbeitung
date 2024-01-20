@@ -204,7 +204,7 @@ void check_user_input(float* a, float* b, float* c, int* scaling, char* outputFi
     printf("The coefficients a, b, c: %f %f %f\n", *a, *b, *c); // test coefficients
 
     // Checking scale_factor
-    check_scaling(&scaling);
+    check_scaling(scaling);
     printf("Scaling factor: %i\n", *scaling); // test scale_factor 
         
     // Checking output filename
