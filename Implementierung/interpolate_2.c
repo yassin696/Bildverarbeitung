@@ -50,7 +50,7 @@ void main() {
      */
 
 
-    intpolcalculation(intArray,allozspeicher,hoehe,breite,factor);
+    intpolcalculation(intArray,allozspeicher,breite,hoehe,factor);
     for (int i = 0; i < hoehe * breite * factor * factor; ++i) {
         if(i % (breite * factor) == 0) {
             printf("\n");
