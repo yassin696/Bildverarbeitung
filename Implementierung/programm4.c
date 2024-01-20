@@ -228,7 +228,7 @@ int read_ppm_header(FILE* inputFile, int* width, int* height, int* maxColorValue
     int char1 = fgetc(inputFile);
     int char2 = fgetc(inputFile);
     if (char1 != 'P' || char2 != '6') {
-        // Error because wrong pictureformat 
+        // Error because wrong picture format 
         errno = EINVAL;
         perror("Invalid Pictureformat. A PPM P6 Picture is expected. For more information please use the option -h | --help");
         fclose(inputFile);
@@ -270,6 +270,56 @@ int read_ppm_header(FILE* inputFile, int* width, int* height, int* maxColorValue
     }
     //printf("Width, height, maxColorValue: %i, %i, %i\n", *(width), *(height), *(maxColorValue));
     return 0;
+}
+
+// read ppm
+uint8_t* read_ppm(char* inputFileName, int* width, int* height, int* imageSize) {
+    // check inputfile 
+    if (strcmp(strrchr(inputFileName, '\0') - 4, ".ppm") != 0) {
+        // The inputfile does not end with ".ppm" -> false file format
+        errno = EIO;
+        perror("Error: Wrong file format. A PPM-Picutre is expected. For more information please use the option -h | --help");
+        return NULL;
+    }
+    printf("Inputfile: %s\n", inputFileName);
+       
+    // read the ppm-header
+    FILE* inputFile = fopen(inputFileName, "rb");
+    if (inputFile == NULL) {
+        // Error while trying open the giving picture
+        perror("The giving picutre can not be opened. For more information please use the option -h | --help");
+        return NULL;
+    }
+    int maxColorValue;
+    if (read_ppm_header(inputFile, width, height, &maxColorValue) == 1) {
+        return NULL;
+    }
+    //printf("Width, height, maxColorValue: %i, %i, %i\n", *(width), *height, *maxColorValue);
+
+    // read the picture
+    *(imageSize) = *(width) * *(height);
+    uint8_t* pixels = (uint8_t*)malloc(*(imageSize) * 3 * sizeof(uint8_t));
+    if (pixels == NULL) {
+        // Error by allocating memory
+        perror("Error by allocating memory");
+        fclose(inputFile);
+        return NULL;
+    }
+    fgetc(inputFile); // new line character after end of the header
+    fread(pixels, sizeof(uint8_t), *(imageSize)*3, inputFile);
+    fclose(inputFile);
+    uint8_t* check_pixels = pixels;
+    for (int i = 0; i < *(imageSize)*3; i++) {
+        if (check_pixels[i] > maxColorValue) {
+            // Error because a pixels is greater than the maxColorValue
+            errno = EINVAL;
+            perror("Invalid value for pixels. RGB-Value of a pixel must be smaller than the max color. For more information please use the option -h | --help");
+            fclose(inputFile);
+            return NULL;
+        }
+    }
+    fclose(inputFile);
+    return pixels;
 }
 
 // write ppm
@@ -368,40 +418,13 @@ int main(int argc, char **argv){
         // check user inputs
         check_user_input(&a, &b, &c, &scaling, outputFileName);
 
-        // check inputfile 
-        if (strcmp(strrchr(inputFileName, '\0') - 4, ".ppm") != 0) {
-            // The inputfile does not end with ".ppm" -> false file format
-            errno = EIO;
-            perror("Error: Wrong file format. A PPM-Picutre is expected. For more information please use the option -h | --help");
-            return 1;
-        }
-        printf("Inputfile: %s\n", inputFileName);
-       
-        // read the ppm-header
-        FILE* inputFile = fopen(inputFileName, "rb");
-        if (inputFile == NULL) {
-            // Error while trying open the giving picture
-            perror("The giving picutre can not be opened. For more information please use the option -h | --help");
-            return 1;
-        }
-        int width; int height; int maxColorValue;
-        if (read_ppm_header(inputFile, &width, &height, &maxColorValue) == 1) {
-            return 1;
-        }
-        //printf("Width, height, maxColorValue: %i, %i, %i\n", *(width), *height, *maxColorValue);
-
-        // read the picture
-        int imageSize = width * height;
-        uint8_t* pixels = (uint8_t*)malloc(imageSize * 3 * sizeof(uint8_t));
+        // read ppm
+        int width; int height; int imageSize;
+        uint8_t* pixels = read_ppm(inputFileName, &width, &height, &imageSize);
         if (pixels == NULL) {
-            // Error by allocating memory
-            perror("Error by allocating memory");
-            fclose(inputFile);
-            return 1;
+            return 1; // error by reading ppm
         }
-        fgetc(inputFile); // new line character after end of the header
-        fread(pixels, sizeof(uint8_t), imageSize*3, inputFile);
-        fclose(inputFile);
+        
         // allocating memories 
         uint8_t* temp = (uint8_t*)malloc((imageSize * sizeof(uint8_t)) + (imageSize * scaling * scaling * sizeof(uint8_t)));
         if (temp == NULL) {
@@ -448,204 +471,59 @@ int main(int argc, char **argv){
     } else if (implementation == 1) {
         printf("Grayscale optimiert durch Lookup\n");
 
-        // Berechnung und Prüfung der Koeffizienten a, b, c
-        float sum = a + b + c;
-        if (sum <= 0) {
-            a = 0.299;
-            b = 0.587;
-            c = 0.114;
-            sum = 1.0;
-            printf("Die Koeffzienten a, b und c sind in der Summe kleiner gleich 0. Deshalb werden Standardwerte verwendet.\n");
-        }
-        if (sum != 1) {
-            a = a / sum;
-            b = b / sum;
-            c = c / sum;
-        }
-        printf("Die Koeffizienten a, b, c: %f %f %f\n", a, b, c); // Testen der Koeffizientenberechnung
+        // check user inputs
+        check_user_input(&a, &b, &c, &scaling, outputFileName);
 
-        // Prüfung der Skalierungsfaktor
-        if (scaling < 1) {
-            printf("Skalierungsfaktor kleiner als 1, deshalb wird Skalierungsfaktor auf 1 gesetzt.");
-            scaling = 1;
-        }
-        printf("Skalierungsfaktor: %i\n", scaling);
-        // oder doch mit Fehlermeldung abbrechen?
-
-        // Prüfung der Ausgabedateiname
-        // Die Zeichen \ / : * ? " < > | . sind in Dateinamen nicht erlaubt. 
-        // Quelle: https://verwaltung.uni-koeln.de/stabsstelle01/content/benutzerberatung/it_faq/windows/faqitems163122/index_ger.html
-        char* filename = outputFileName;
-        int length = strlen(outputFileName);
-        if (length == 0 || length > 255) {
-            // Dateiname zu lang oder nicht existierend
-            printf("Dateiname ist zu lang oder nicht existierend, deshalb wird output.pgm als Ausgabedateiname verwendet.");
-            outputFileName = "output.pgm";
-        }
-        if (filename[0] == '.' || filename[length-1] == '.') {
-            // Dateiname darf nicht mit . beginnen oder enden
-            printf("Dateiname darf nicht mit . beginnen oder enden, deshalb wird output.pgm als Ausgabedateiname verwendet.");
-            outputFileName = "output.pgm";
-        }
-        int whitespace = 1;
-        for (int i = 0; i < length; i++) {
-            if (filename[i] != ' ') {
-                whitespace = 0;
-            }
-            if (filename[i] == '/' || filename[i] == '\\' || filename[i] == ':' || filename[i] == '*' || filename[i] == '?' || filename[i] == '"' || filename[i] == '<' || filename[i] == '>' || filename[i] == '|') {
-                // Dateiname enthält nicht erlaubte Zeichen
-                printf("Dateiname enthaelt nicht erlaubte Zeichen, deshalb wird output.pgm als Ausgabedateiname verwendet.");
-                outputFileName = "output.pgm";
-            }
-        }
-        if (whitespace == 1) {
-            // Dateiname enthält nur Leerzeichen
-            printf("Dateiname enthaelt nur Leerzeichen, deshalb wird output.pgm als Ausgabedateiname verwendet.");
-            outputFileName = "output.pgm";
-        }
-        printf("Ausgabedatei: %s\n", outputFileName);
-        // oder doch mit Fehlermeldung abbrechen?
-
-        // Prüfen des Bildes 
-        if (strcmp(strrchr(inputFileName, '\0') - 4, ".ppm") != 0) {
-            // Die Eingabedatei endet nicht mit  ".ppm" -> falsches Eingabeformat
-            printf("Test failed here \n");
-            fprintf(stderr, "Ungueltiges Dateiformat. Es wird ein PPM-Bild erwartet.\n");
-            return 1;
-        }
-        printf("Eingabedatei: %s\n", inputFileName);
-
-        FILE* inputFile = fopen(inputFileName, "rb");
-        if (inputFile == NULL) {
-            // Fehler beim Öffnen des Bildes
-            fprintf(stderr, "Das angegebene Bild kann nicht geoeffnet werden.");
-        }
-        //printf("Bild kann geoeffnet werden!\n");
-        char magicNumber[3];
-        fscanf(inputFile, "%s", magicNumber);
-        if (strcmp(magicNumber, "P6") != 0) {
-            // Fehlermeldung wegen falsches Bildformat
-            printf("here\n");
-            fprintf(stderr, "Ungueltiges Dateiformat. Es wird ein P6 PPM-Bild erwartet.\n");
-            fclose(inputFile);
-            return 1;
-        }
-        //printf("Header erste Zeile stimmt\n");
-        int ch;
-        while(1) {
-            while((ch=fgetc(inputFile)) == ' '); // whitespace überspringen
-            if (ch == '#') {
-                while((ch=fgetc(inputFile)) != '\n'); // Kommentar überspringen
-            } else {
-                ungetc(ch, inputFile); //letzte gelesene Zeichen zurückgehen
-                break;
-            }
-        }
-        int width;
-        fscanf(inputFile, "%d", &width);
-        while(1) {
-            while((ch=fgetc(inputFile)) == ' '); // whitespace überspringen
-            if (ch == '#') {
-                while((ch=fgetc(inputFile)) != '\n'); // Kommentar überspringen
-            } else {
-                ungetc(ch, inputFile); //letzte gelesene Zeichen zurückgehen
-                break;
-            }
-        }
-        int height;
-        fscanf(inputFile, "%d", &height);
-        while(1) {
-            while((ch=fgetc(inputFile)) == ' '); // whitespace überspringen
-            if (ch == '#') {
-                while((ch=fgetc(inputFile)) != '\n'); // Kommentar überspringen
-            } else {
-                ungetc(ch, inputFile); //letzte gelesene Zeichen zurückgehen
-                break;
-            }
-        }
-        int maxColorValue;
-        fscanf(inputFile, "%d", &maxColorValue);
-        printf("Width, height, maxColorValue: %i, %i, %i\n", width, height, maxColorValue);
-        if (maxColorValue > 255) {
-            // Fehlermeldung wegen falsches Bildformat
-            fprintf(stderr, "Ungueltiger Maximalwert für die Farben. Es wird ein Wert von 255 erwartet.\n");
-            fclose(inputFile);
-            return 1;
-        }
-        if (maxColorValue == 0) {
-            // Fehlermeldung wegen falsches Bildformat
-            fprintf(stderr, "Ungueltiger Maximalwert für die Farben. Null als Wer ist nicht erlaubt.\n");
-            fclose(inputFile);
-            return 1;
-        }
-        //printf("Header stimmt vollständig\n");
-        int imageSize = width * height;
-        typedef struct {
-            uint8_t r;
-            uint8_t g;
-            uint8_t b;
-        } Pixel;
-        Pixel* pixels = (Pixel*)malloc(imageSize * sizeof(Pixel));
-        fgetc(inputFile); // new line character
-        fread(pixels, sizeof(Pixel), imageSize, inputFile);
-        fclose(inputFile);
-        //printf("Berechnung startet\n");
-
-        // Berechnung
-        if (benchmark == 1) {
-            // Laufzeit wird gemessen und ausgegeben
-            // Noch nicht implementiert
-            if (repetitions < 1) { repetitions = 1; }
-            // oder doch mit Fehlermeldung abbrechen?
-            for (int i = 1; i < repetitions; i++) {
-                // Programm ausführen
-            }
-            printf("Anzahl der Wiederholungen: %d \n", repetitions);
-            return 0;
-        }
-        uint8_t* temp = (uint8_t*)malloc(imageSize * sizeof(uint8_t));
-        if (temp == NULL) {
-            // Fehler beim Allizieren des Speichers
-            printf("Fehler beim Allozieren des Speichers.\n");
-            return 1;
-        }
-        uint8_t* result = (uint8_t*)malloc(imageSize * scaling * scaling * sizeof(uint8_t));
-        if (result == NULL) {
-            // Fehler beim Allizieren des Speichers
-            printf("Fehler beim Allozieren des Speichers.\n");
-            return 1;
-        }
-        uint8_t* img = (uint8_t*)malloc(imageSize * 3 * sizeof(uint8_t));
-        if (img == NULL) {
-            // Fehler beim Allizieren des Speichers
-            printf("Fehler beim Allozieren des Speichers.\n");
-            return 1;
-        }
-        // img speichert zuerst alle r-value, dann alle g-value und zuletzt alle b-value
-        for (int i = 0; i < imageSize; i++) {
-            img[i] = (uint8_t) pixels[i].r;
-            img[i+imageSize] = (uint8_t) pixels[i].g;
-            img[i+imageSize+imageSize] = (uint8_t) pixels[i].b;
+        // read ppm
+        int width; int height; int imageSize;
+        uint8_t* pixels = read_ppm(inputFileName, &width, &height, &imageSize);
+        if (pixels == NULL) {
+            return 1; // error by reading ppm
         }
         
-        // Berechnung
-        interpolate(img, width, height, a, b, c, scaling, temp, result);
-
-        // Abspeichern
-        FILE* outputFile = fopen(outputFileName, "wb");
-        if (outputFile == NULL) {
-            fprintf(stderr, "Ungueltiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
-            fclose(outputFile);
+        // allocating memories 
+        uint8_t* temp = (uint8_t*)malloc((imageSize * sizeof(uint8_t)) + (imageSize * scaling * scaling * sizeof(uint8_t)));
+        if (temp == NULL) {
+            // Error by allocating memory
+            perror("Error by allocating memory");
             return 1;
         }
-        fprintf(outputFile, "P5\n");
-        fprintf(outputFile, "%d %d\n", (width*scaling), (height*scaling));
-        fprintf(outputFile, "255\n");
-        fwrite(result, sizeof(uint8_t), (width*scaling)*(height*scaling)*sizeof(uint8_t), outputFile);
-        fclose(outputFile);
-        free(result);
-        free(temp);
+        uint8_t* result = temp + (imageSize * sizeof(uint8_t));
+        if (result == NULL) {
+            // Error by allocating memory
+            perror("Error by allocating memory");
+            return 1;
+        }
+        // result is a part of the allocated memory for temp. The interpolated picture will be saved by result, the grayscale by temp
+
+        // Calculation
+        if (benchmark == 1) {
+            // measuaring duration
+            // Noch nicht implementiert
+            if (repetitions < 1) { repetitions = 1; }
+            for (int i = 1; i < repetitions; i++) {
+                // call the functions 
+            }
+            printf("Times of repetitions: %d \n", repetitions);
+            return 0;
+        }
+        
+        // grayscale and interpolation  
+        interpolate_optimized1(pixels, width, height, a, b, c, scaling, temp, result);
         free(pixels);
+
+        // Saving the result picture 
+        if (scaling == 1) {
+            if (write_ppm(outputFileName, width, height, scaling, temp) == 1) {
+                return 1;
+            }
+        } else {
+            if (write_ppm(outputFileName, width, height, scaling, result) == 1) { 
+                return 1;
+            }
+        }
+        free(temp);
+
     } else {
         //another implementation ??? 
     }
