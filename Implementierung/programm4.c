@@ -197,6 +197,21 @@ char* check_output(char* outputFileName) {
     return outputFileName;
 }
 
+// checking user inputs
+void check_user_input(float* a, float* b, float* c, int* scaling, char* outputFileName) {
+    // Checking and calculating of coefficients a, b, c (a=a/(a+b+c), b=b/(a+b+c), c=c/(a+b+c))
+    check_coefficients(a, b, c);
+    printf("The coefficients a, b, c: %f %f %f\n", *a, *b, *c); // test coefficients
+
+    // Checking scale_factor
+    check_scaling(&scaling);
+    printf("Scaling factor: %i\n", *scaling); // test scale_factor 
+        
+    // Checking output filename
+    outputFileName = check_output(outputFileName);
+    printf("Output Filename: %s\n", outputFileName); // test outputfilename
+}
+
 // read ppm header - return 1 if the header is false
 void skip_comment(FILE *inputFile) {
     // skip possible comments between the values that need to be read for the header
@@ -350,17 +365,8 @@ int main(int argc, char **argv){
         // standard implementation
         printf("Standard implementation\n");
 
-        // Checking and calculating of coefficients a, b, c (a=a/(a+b+c), b=b/(a+b+c), c=c/(a+b+c))
-        check_coefficients(&a, &b, &c);
-        printf("The coefficients a, b, c: %f %f %f\n", a, b, c); // test coefficients
-
-        // Checking scale_factor
-        check_scaling(&scaling);
-        printf("Scaling factor: %i\n", scaling); // test scale_factor 
-        
-        // Checking output filename
-        outputFileName = check_output(outputFileName);
-        printf("Output Filename: %s\n", outputFileName); // test outputfilename
+        // check user inputs
+        check_user_input(&a, &b, &c, &scaling, outputFileName);
 
         // check inputfile 
         if (strcmp(strrchr(inputFileName, '\0') - 4, ".ppm") != 0) {
