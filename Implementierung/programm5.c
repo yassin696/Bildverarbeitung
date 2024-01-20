@@ -6,6 +6,8 @@
 #include <inttypes.h>
 #include <math.h>
 #include <errno.h>
+#include <immintrin.h>
+#include <emmintrin.h>
 
 // naive grayscale-solution
 void grayscale_naiv(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
@@ -52,6 +54,30 @@ void grayscale_look_up(const uint8_t* img, size_t width, size_t height, float a,
     free(tableB);
     free(tableC);
 }
+
+// grayscale optimiyed with SIMD
+void grayscale_simd(const uint8_t* img, int width, int height, float a, float b, float c, uint8_t* tmp) {
+    // Prepare SIMD constants for coefficients
+    __m128 coef = _mm_set_ps(0.0f, c, b, a);
+
+    // Process pixels one at a time
+    for (size_t i = 0; i < height * width * 3; i += 3) {
+        // Load the pixel values as floats using SIMD
+        __m128 pixelR = _mm_set_ss((float)img[i]);
+        __m128 pixelG = _mm_set_ss((float)img[i + 1]);
+        __m128 pixelB = _mm_set_ss((float)img[i + 2]);
+
+        // Multiply each color channel with the corresponding coefficient
+        __m128 resultFloat = _mm_add_ps(_mm_add_ps(_mm_mul_ps(pixelR, coef), _mm_mul_ps(pixelG, coef)), _mm_mul_ps(pixelB, coef));
+
+        // Convert to grayscale value
+        uint8_t gray = (uint8_t)_mm_cvtss_f32(resultFloat);
+
+        // Store the grayscale value in the tmp array
+        tmp[i / 3] = gray;
+    }
+}
+
 
 // naive bilinear interpolation
 void bilinear_interpolate_naive(uint8_t* tmp, size_t width, size_t height, size_t scale_factor, uint8_t* result) {
@@ -114,6 +140,19 @@ void interpolate_optimized1(const uint8_t* img, size_t width, size_t height, flo
         return;
     }
     grayscale_look_up(img, width, height, a, b, c, tmp);
+
+    // interpolation naive
+    bilinear_interpolate_naive(tmp, width, height, scale_factor, result);
+}
+
+// interpolate with optimiyed grayscale (SIMD)
+void interpolate_optimized2(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
+    // grayscale optimized with look-up tables
+    if (scale_factor == 1) {
+        grayscale_simd(img, width, height, a, b, c, tmp);
+        return;
+    }
+    grayscale_simd(img, width, height, a, b, c, tmp);
 
     // interpolation naive
     bilinear_interpolate_naive(tmp, width, height, scale_factor, result);
@@ -524,6 +563,62 @@ int main(int argc, char **argv){
         }
         free(temp);
 
+    } else if (implementation == 2) {
+        printf("Grayscale optimized with SIMD\n");
+
+        // check user inputs
+        check_user_input(&a, &b, &c, &scaling, outputFileName);
+
+        // read ppm
+        int width; int height; int imageSize;
+        uint8_t* pixels = read_ppm(inputFileName, &width, &height, &imageSize);
+        if (pixels == NULL) {
+            return 1; // error by reading ppm
+        }
+        
+        // allocating memories 
+        uint8_t* temp = (uint8_t*)malloc((imageSize * sizeof(uint8_t)) + (imageSize * scaling * scaling * sizeof(uint8_t)));
+        if (temp == NULL) {
+            // Error by allocating memory
+            perror("Error by allocating memory");
+            return 1;
+        }
+        uint8_t* result = temp + (imageSize * sizeof(uint8_t));
+        if (result == NULL) {
+            // Error by allocating memory
+            perror("Error by allocating memory");
+            return 1;
+        }
+        // result is a part of the allocated memory for temp. The interpolated picture will be saved by result, the grayscale by temp
+
+        // Calculation
+        if (benchmark == 1) {
+            // measuaring duration
+            // Noch nicht implementiert
+            if (repetitions < 1) { repetitions = 1; }
+            for (int i = 1; i < repetitions; i++) {
+                // call the functions 
+            }
+            printf("Times of repetitions: %d \n", repetitions);
+            return 0;
+        }
+        
+        // grayscale and interpolation  
+        interpolate_optimized2(pixels, width, height, a, b, c, scaling, temp, result);
+        free(pixels);
+
+        // Saving the result picture 
+        if (scaling == 1) {
+            if (write_ppm(outputFileName, width, height, scaling, temp) == 1) {
+                return 1;
+            }
+        } else {
+            if (write_ppm(outputFileName, width, height, scaling, result) == 1) { 
+                return 1;
+            }
+        }
+        free(temp);
+        
     } else {
         //another implementation ??? 
     }
