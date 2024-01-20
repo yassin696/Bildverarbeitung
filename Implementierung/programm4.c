@@ -5,35 +5,57 @@
 #include <string.h>
 #include <inttypes.h>
 #include <math.h>
+#include <errno.h>
 
-void interpolate(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, float* tmp, uint8_t* result) {
-    // Graustufenkonvertierung
+// naive grayscale-solution
+void grayscale_naiv(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
     size_t i = 0;
     int j = 0;
-    if (scale_factor == 1) {
-        while (i < height * width * 3) {
-            uint8_t R = img[i];
-            uint8_t G = img[i + 1];
-            uint8_t B = img[i + 2];
-           uint8_t D = round(R * a + G * b + B * c);
-            result[j] = D;
-            i += 3;
-            j += 1;
-        }
-        return;
-    } 
     while (i < height * width * 3) {
         uint8_t R = img[i];
         uint8_t G = img[i + 1];
         uint8_t B = img[i + 2];
-        float D = R * a + G * b + B * c;
+        uint8_t D = round(R * a + G * b + B * c);
         tmp[j] = D;
         i += 3;
         j += 1;
     }
+}
 
-    // Interpolation
-     // Einzelne Sektoren werden bearbeitet
+// grayscale optimized with look-up tables
+void gentable(float coeff, float* array) {
+   // generate look-up tables
+    for (int i = 0; i < 256; ++i) {
+        array[i] = (i * coeff);
+    }
+}
+
+void grayscale_look_up(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
+    // the tables are smaller than 1 MB, which a modern computer has as the stack for a process
+    float* tableA = malloc(256 * sizeof(float));
+    float* tableB = malloc(256 * sizeof(float));
+    float* tableC = malloc(256 * sizeof(float));
+    gentable(a, tableA);
+    gentable(b, tableB);
+    gentable(c, tableC);
+    size_t size = height * width;
+    for (size_t i = 0; i < size; ++i) {
+        uint8_t R = img[i];
+        uint8_t G = img[size + i];
+        uint8_t B = img[size + size + i];
+
+        // Lookup precomputed values from tables
+        float weightedSum = tableA[R] + tableB[G] + tableC[B];
+        tmp[i] =(uint8_t)weightedSum;
+    }
+    free(tableA);
+    free(tableB);
+    free(tableC);
+}
+
+// naive bilinear interpolation
+void bilinear_interpolate_naive(uint8_t* tmp, size_t width, size_t height, size_t scale_factor, uint8_t* result) {
+    // Einzelne Sektoren werden bearbeitet
     for(size_t sektorh = 0; sektorh < height;sektorh++) {
         for (size_t sektorb = 0; sektorb < width; sektorb++) {
             //Sektoren a,b,c,d Werte, also (0,0), (0,s), (s,0) und (s,s) werden für alle berechnet
@@ -45,7 +67,6 @@ void interpolate(const uint8_t* img, size_t width, size_t height, float a, float
             // Für jeden einzelnen Wert in den Quadraten berechne nach Formel den Wert
             for(size_t y=0;y<scale_factor;y++) {
                 for (size_t x = 0; x < scale_factor; x++) {
-
 
                     // berechne position im finalen AllozSpeicher
                     int pos = (x + scale_factor * sektorb) + ((sektorh * scale_factor + y) * width * scale_factor);
@@ -71,109 +92,193 @@ void interpolate(const uint8_t* img, size_t width, size_t height, float a, float
     }
 }
 
+// interpolate for the standard implementation
+void interpolate(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
+    // grayscale naive
+    if (scale_factor == 1) {
+        grayscale_naiv(img, width, height, a, b, c, tmp);
+        return;
+    } 
+    grayscale_naiv(img, width, height, a, b, c, tmp);
 
-void gentable(float coeff, float* array) {
-    for (int i = 0; i < 256; ++i) {
-        array[i] = (i * coeff);
-    }
+    // interpolation naive
+    bilinear_interpolate_naive(tmp, width, height, scale_factor, result);
+
 }
 
-void interpolate1(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, float* tmp, float* result) {
-    // Graustufenkonvertierung
-    //these tables take place from the stack the whole method it would be better to malloc them or declare them out of the method 
-    float* tableA = malloc(256 * sizeof(float));
-    float* tableB = malloc(256 * sizeof(float));
-    float* tableC = malloc(256 * sizeof(float));
-    gentable(a, tableA);
-    gentable(b, tableB);
-    gentable(c, tableC);
-    size_t size = height * width;
+// interpolate with optimized grayscale (look-up tables)
+void interpolate_optimized1(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
+    // grayscale optimized with look-up tables
     if (scale_factor == 1) {
-        for (size_t i = 0; i < size; ++i) {
-            uint8_t R = img[i];
-            uint8_t G = img[size + i];
-            uint8_t B = img[size + size + i];
-            
-            // Lookup precomputed values from tables
-            float weightedSum = tableA[R] + tableB[G] + tableC[B];
-            result[i] =(uint8_t)weightedSum;
-        }
-    free(tableA);
-    free(tableB);
-    free(tableC);
+        grayscale_look_up(img, width, height, a, b, c, tmp);
         return;
     }
-    for (size_t i = 0; i < size; ++i) {
-        uint8_t R = img[i];
-        uint8_t G = img[size + i];
-        uint8_t B = img[size + size + i];
-            
-        // Lookup precomputed values from tables
-        float weightedSum = tableA[R] + tableB[G] + tableC[B];
-        tmp[i] = weightedSum;
+    grayscale_naiv(img, width, height, a, b, c, tmp);
+
+    // interpolation naive
+    bilinear_interpolate_naive(tmp, width, height, scale_factor, result);
+}
+
+
+// framework
+// checking coefficients and precalculate them (a=a/(a+b+c), b=b/(a+b+c), c=c/(a+b+c))
+float* check_coefficients(float a, float b, float c) {
+    float sum = a + b + c;
+    if (sum <= 0) {
+        a = 0.299;
+        b = 0.587;
+        c = 0.114;
+        sum = 1.0;
+        printf("The sum of a, b and c is smaller or equal 0. Therefore, the default value will be used.\n");
     }
-free(tableA);
-free(tableB);
-free(tableC);
-    // Interpolation
+    if (sum != 1) {
+         a = a / sum;
+         b = b / sum;
+          c = c / sum;
+    }
+    static float  f[3];
+    f[0]=a; f[1]=b; f[2]=c;
+    float* ptr = f;
+    return ptr;
+}
 
-    // Einzelne Sektoren werden bearbeitet
-    for(size_t sektorh = 0; sektorh < height;sektorh++) {
-        for (size_t sektorb = 0; sektorb < width; sektorb++) {
-            //Sektoren a,b,c,d Werte, also (0,0), (0,s), (s,0) und (s,s) werden für alle berechnet
-            //possibility of changing int to float..
-            float a = tmp[sektorh * width + sektorb];
-            float b = tmp[sektorh * width + (sektorb + 1) % width];
-            float c = tmp[((sektorh + 1) % height) * width + sektorb];
-            float d = tmp[((sektorh + 1) % height) * width + (sektorb + 1) % width];
+// checking scaling
+int check_scaling(int scaling) {
+    if (scaling < 1) {
+        printf("The scale factor is smaller than 1, so the default value 2 will be used.\n");
+        scaling = 2;
+    }
+    return scaling;
+}
 
-            // Für jeden einzelnen Wert in den Quadraten berechne nach Formel den Wert
-            for(size_t y=0;y<scale_factor;y++) {
-                for (size_t x = 0; x < scale_factor; x++) {
-
-
-                    // berechne position im finalen AllozSpeicher
-                    size_t pos = (x + scale_factor * sektorb) + ((sektorh * scale_factor + y) * width * scale_factor);
-
-                    // da wert x=0, y=0 immer den a-Wert ergibt kann dieser auch direkt eingetragen werden
-                    // die berechnung füllt ja nur das quadrat für eins kleiner von s aus, dass keine Werte doppelt berechnet werden
-                    if(x == 0 && y == 0) {
-                        result[pos] = (uint8_t) a;
-                        continue;
-                    }
-
-                    // berechne Wert
-                    float polwert = (a * (scale_factor-y) * (scale_factor-x) ) + ( c * y * ( scale_factor-x) ) + ( b * (scale_factor-y) * x ) + ( d * y * x );
-                    // multipliziere mit (1 / s*s)
-                    polwert = polwert / (scale_factor * scale_factor);
-                    //printf("[%i;%i] %i - %i\n",x,y,pos,polwert);
-
-                    //speichere ab
-                    result[pos] = (uint8_t) polwert;
-                }
-            }
+// checking output filename
+char* check_output(char* outputFileName) {
+    // Characters like \ / : * ? " < > | . are not allowed in filenames
+    // Source: https://verwaltung.uni-koeln.de/stabsstelle01/content/benutzerberatung/it_faq/windows/faqitems163122/index_ger.html
+    int length = strlen(outputFileName);
+    char* filename = outputFileName;
+    if (length == 0 || length > 255) {
+        // filename too long or does not exists
+        printf("Filename is too long or does not exists. Therefore the default value 'output.pgm' will be used.\n");
+        outputFileName = "output.pgm";
+        return outputFileName;
+    }
+    if (filename[0] == '.' || filename[length-1] == '.') {
+        // Filename are not allowed to start or end with '.'
+        printf("Filename are not allowed to start or end with '.'. Therefore the default value 'output.pgm' will be used.\n");
+        outputFileName = "output.pgm";
+        return outputFileName;
+    }
+    int whitespace = 1;
+    for (int i = 0; i < length; i++) {
+        if (filename[i] != ' ') {
+            whitespace = 0;
+        }
+        if (filename[i] == '/' || filename[i] == '\\' || filename[i] == ':' || filename[i] == '*' || filename[i] == '?' || filename[i] == '"' || filename[i] == '<' || filename[i] == '>' || filename[i] == '|') {
+            // Filename contains not allwoed characters
+            printf("Filename contains not allwoed characters. Therefore the default value 'output.pgm' will be used.\n");
+            outputFileName = "output.pgm";
+            return outputFileName;
         }
     }
+    if (whitespace == 1) {
+        // Filename only contains whitespaces
+        printf("Filename only contains whitespaces. Therefore the default value 'output.pgm' will be used.\n");
+        outputFileName = "output.pgm";
+        return outputFileName;
+    }
+    if (strcmp(strrchr(outputFileName, '\0') - 4, ".pgm") != 0) {
+        // Filename should end with '.pgm' 
+        printf("Filename should end with '.pgm'. Therefore '.pgm' will be concatenated on the given filename.\n");
+        filename[length] = '.';
+        filename[length+1] = 'p';
+        filename[length+2] = 'g';
+        filename[length+3] = 'm';
+        filename[length+4] = '\0';
+        outputFileName = filename;
+        return outputFileName;
+        
+    }
+    return outputFileName;
 }
 
 
 
-int main(int argc, char **argv){
-    //Rahmenprogramm
+// read ppm header - return 1 if the header is false
+// skip possible comments between the values that need to be read for the header
+void skip_comment(FILE *inputFile) {
+    int ch;
+    fscanf(inputFile, " "); // skip withespace
+    while ((ch = fgetc(inputFile)) == '#') { // comment begins
+      while ((ch = fgetc(inputFile)) != '\n'); // skip comment 
+      fscanf(inputFile, " "); // skip withespace
+    }
+    ungetc(ch, inputFile); // go last readed character back 
+}
 
-    // Variable Deklaration
+int read_ppm_header(FILE* inputFile, int* width, int* height, int* maxColorValue) {
+    int char1 = fgetc(inputFile);
+    int char2 = fgetc(inputFile);
+    if (char1 != 'P' || char2 != '6') {
+        // Error because wrong pictureformat 
+        errno = EINVAL;
+        perror("Invalid Pictureformat. A PPM P6 Picture is expected. For more information please use the option -h | --help");
+        fclose(inputFile);
+        return 1;
+    }
+    skip_comment(inputFile);
+    fscanf(inputFile, "%d", width);
+    if (*(width) <= 0) {
+        // Error because wrong width
+        errno = EINVAL;
+        perror("Invalue value for width. Width must be greater than 0. For more information please use the option -h | --help");
+        fclose(inputFile);
+        return 1;
+    }
+    skip_comment(inputFile);
+    fscanf(inputFile, "%d", height);
+    if (*(height) <= 0) {
+        // Error because wrong height
+        errno = EINVAL;
+        perror("Invalid value for height. Height must be greater than 0. For more information please use the option -h | --help");
+        fclose(inputFile);
+        return 1;
+    }
+    skip_comment(inputFile);
+    fscanf(inputFile, "%d", maxColorValue); 
+    if (*(maxColorValue) > 255) {
+        // Error because wrong maxColorValue
+        errno = EINVAL;
+        perror("Invalue value for max color. A value smaller or equal 255 is expected. For more information please use the option -h | --help");
+        fclose(inputFile);
+        return 1;
+    }
+    if (*(maxColorValue) <= 0) {
+        // Error because wrong maxColorValue
+        errno = EINVAL;
+        perror("Invalid value for max color. Max color must be greater than 0. For more information please use the option -h | --help");
+        fclose(inputFile);
+        return 1;
+    }
+    //printf("Width, height, maxColorValue: %i, %i, %i\n", *(width), *(height), *(maxColorValue));
+    return 0;
+}
+
+// main - framework programm
+int main(int argc, char **argv){
+    // declaration of variables
     int option;
-    int implementation = 0;  // Hauptimplementierung
-    int benchmark = 0;// 1, falls Laufzeit gemessen werden soll
-    int repetitions = 1; // Anzahl der Wiederholungen
-    char* inputFileName = NULL;
-    char* outputFileName = "output.pgm";
-    float a = 0.299;
+    int implementation = 0; // if implementation is 0, then the standard implementation will be used
+    int benchmark = 0; // 1, if the programm should measure the duration
+    int repetitions = 1; // number of repetitions
+    char* inputFileName = NULL; // input file
+    char* outputFileName = "output.pgm"; // standard output file, if there is no valide user input
+    float a = 0.299; // coefficients a, b, c, if there are no valide user inputs
     float b = 0.587;
     float c = 0.114;
-    int scaling = 1; // Soll die Skalierungsfaktor einen Integer sein?
+    int scaling = 2;
 
-    // Kommandozeilen-Argumente parsen
+    // parse command line arguments
     static struct option long_options[] = {
             {"coeffs", required_argument, 0, 'c'},
             {"help", no_argument, 0, 'h'},
@@ -186,7 +291,6 @@ int main(int argc, char **argv){
                 break;
             case 'V':
                 implementation = atoi(optarg);
-                //printf("Implementierung: %i\n", implementation);
                 break;
             case 'B':
                 benchmark = 1;
@@ -197,222 +301,125 @@ int main(int argc, char **argv){
                 break;
             case 'c':
                 sscanf(optarg, "%f,%f,%f", &a, &b, &c);
-                //printf("a, b, c: %f %f %f\n", a, b, c);
                 break;
             case 'f':
-                // Skalierungsfaktor
                 scaling = atoi(optarg);
                 break;
             case 'h':
-                // Beschreibung aller Optionen des Programms und Verwendungsbeispiele werden ausgegeben und das Programm danach beendet
+                // Description of all options of the program and usage examples are displayed (the programm will end after that)
+
                 // Verwendungsbeispiele fehlen !!!
-                printf("Beschreibung der Optionen:\n");
-                printf("-V<Zahl> : Die Implementierung, die verwendet werden soll. Hierbei wird mit -V 0 die Hauptimplementierung verwendet. Wenn diese Option nicht gesetzt wird, wird ebenfalls die Hauptimplementierung ausgefuehrt werden.\n");
-                printf("-B<Zahl> : Falls gesetzt, wird die Laufzeit der angegebenen Implementierung gemessen und ausgegeben. Das optionale Argument dieser Option gibt die Anzahl an Wiederholungen des Funktionsaufrufs an.\n");
-                printf("<Dateiname> : Positionales Argument für die Eingabedatei.\n");
-                printf("-o<Dateiname> : Ausgabedatei.\n");
-                printf("--coeffs<FP Zahl>,<FP Zahl>,<FP Zahl> : Die Koeffizienten der Graustufenkonvertierung a, b und c. Falls diese Option nicht gesetzt wird, werden die Standardwerte 0.299, 0.587 und 0.114 verwendet.\n");
-                printf("-f<Zahl> : Skalierungsfaktor.\n");
-                printf("-h|--help : Eine Beschreibung aller Optionen des Programms und Verwendungsbeispiele.\n");
+                printf("Description of all optiions of the program:\n");
+                printf("-V<Number> : The implementation, that will be used. For -V 0, the standard implementation will be used. If this option is not called, the standard implementation also will be used.\n");
+                printf("-B<Number> : If this option is called, the duration for the specified implementation will be measured. This optional argument indicates the number of the repetitions of the function calling.\n");
+                printf("<Filename> : Positional argument for the input filename. This option must be called, either it will return a error because of missing entries.\n");
+                printf("-o<Filename> : Output filename If this option is not called, the default value 'output.pgm' will be used.\n");
+                printf("--coeffs<FP Number>,<FP Number>,<FP Number> : The coefficients a, b and c for the grayscale. If this option is not called, the default value 0.299, 0.587 und 0.114 will be used.\n");
+                printf("-f<Number> : Scaling factor. If this option is not called, the default value 2 will be used.\n");
+                printf("-h|--help : A description of all options of the program with usage examples will be displayed.\n");
                 exit(0);
             default:
-                // Fehlermehldung wegen fehlender Eingaben
-                fprintf(stderr, "Es fehlen alle noetigen Parameter. Fuer weitere Informationen verwenden Sie bitte die Option -h|--help.");
+                // Error because of missing entries
+                fprintf(stderr, "All necessary parameters are missing. For more information please use the option -h | --help.\n");
                 exit(1);
         }
     }
 
-
     if (optind < argc) {
         inputFileName = argv[optind];
     } else {
-        // Fehlermeldung wegen Fehlen des Bildes
-        fprintf(stderr, "Das Bild, das interpoliert werden soll, ist nicht eingegeben.");
+        // Error because the inputfile is missing
+        errno = EIO;
+        perror("Error: The inputfile is missing. For more information please use the option -h | --help");
         return 1;
     }
 
-    //Eigentliches Programm
+    // program with checking user inputs and calculation
     if (implementation == 0) {
-        // Hauptimplementation
-        printf("Hauptimplementation\n");
+        // standard implementation
+        printf("Standard implementation\n");
 
-        // Berechnung und Prüfung der Koeffizienten a, b, c
-        float sum = a + b + c;
-        if (sum <= 0) {
-            a = 0.299;
-            b = 0.587;
-            c = 0.114;
-            sum = 1.0;
-            printf("Die Koeffzienten a, b und c sind in der Summe kleiner gleich 0. Deshalb werden Standardwerte verwendet.\n");
-        }
-        if (sum != 1) {
-            a = a / sum;
-            b = b / sum;
-            c = c / sum;
-        }
-        printf("Die Koeffizienten a, b, c: %f %f %f\n", a, b, c); // Testen der Koeffizientenberechnung
+        // Checking and calculating of coefficients a, b, c (a=a/(a+b+c), b=b/(a+b+c), c=c/(a+b+c))
+        float* f = check_coefficients(a, b, c);
+        a=f[0], b=f[1], c=f[2];
+        printf("The coefficients a, b, c: %f %f %f\n", a, b, c); // test coefficients
 
-        // Prüfung der Skalierungsfaktor
-        if (scaling < 1) {
-            printf("Skalierungsfaktor kleiner als 1, deshalb wird Skalierungsfaktor auf 1 gesetzt.");
-            scaling = 1;
-        }
-        printf("Skalierungsfaktor: %i\n", scaling);
-        // oder doch mit Fehlermeldung abbrechen?
+        // Checking scale_factor
+        scaling = check_scaling(scaling);
+        printf("Scaling factor: %i\n", scaling);
+        
+        // Checking output filename
+        outputFileName = check_output(outputFileName);
+        printf("Output Filename: %s\n", outputFileName);
 
-        // Prüfung der Ausgabedateiname
-        // Die Zeichen \ / : * ? " < > | . sind in Dateinamen nicht erlaubt. 
-        // Quelle: https://verwaltung.uni-koeln.de/stabsstelle01/content/benutzerberatung/it_faq/windows/faqitems163122/index_ger.html
-        char* filename = outputFileName;
-        int length = strlen(outputFileName);
-        if (length == 0 || length > 255) {
-            // Dateiname zu lang oder nicht existierend
-            printf("Dateiname ist zu lang oder nicht existierend, deshalb wird output.pgm als Ausgabedateiname verwendet.");
-            outputFileName = "output.pgm";
-        }
-        if (filename[0] == '.' || filename[length-1] == '.') {
-            // Dateiname darf nicht mit . beginnen oder enden
-            printf("Dateiname darf nicht mit . beginnen oder enden, deshalb wird output.pgm als Ausgabedateiname verwendet.");
-            outputFileName = "output.pgm";
-        }
-        int whitespace = 1;
-        for (int i = 0; i < length; i++) {
-            if (filename[i] != ' ') {
-                whitespace = 0;
-            }
-            if (filename[i] == '/' || filename[i] == '\\' || filename[i] == ':' || filename[i] == '*' || filename[i] == '?' || filename[i] == '"' || filename[i] == '<' || filename[i] == '>' || filename[i] == '|') {
-                // Dateiname enthält nicht erlaubte Zeichen
-                printf("Dateiname enthaelt nicht erlaubte Zeichen, deshalb wird output.pgm als Ausgabedateiname verwendet.");
-                outputFileName = "output.pgm";
-            }
-        }
-        if (whitespace == 1) {
-            // Dateiname enthält nur Leerzeichen
-            printf("Dateiname enthaelt nur Leerzeichen, deshalb wird output.pgm als Ausgabedateiname verwendet.");
-            outputFileName = "output.pgm";
-        }
-        printf("Ausgabedatei: %s\n", outputFileName);
-        // oder doch mit Fehlermeldung abbrechen?
-
-        // Prüfen des Bildes 
+        // check inputfile 
         if (strcmp(strrchr(inputFileName, '\0') - 4, ".ppm") != 0) {
-            // Die Eingabedatei endet nicht mit  ".ppm" -> falsches Eingabeformat
-            printf("Test failed here \n");
-            fprintf(stderr, "Ungueltiges Dateiformat. Es wird ein PPM-Bild erwartet.\n");
+            // The inputfile does not end with ".ppm" -> false file format
+            errno = EIO;
+            perror("Error: Wrong file format. A PPM-Picutre is expected. For more information please use the option -h | --help");
             return 1;
         }
-        printf("Eingabedatei: %s\n", inputFileName);
-
+        printf("Inputfile: %s\n", inputFileName);
+       
+        // read the ppm-header
         FILE* inputFile = fopen(inputFileName, "rb");
         if (inputFile == NULL) {
-            // Fehler beim Öffnen des Bildes
-            fprintf(stderr, "Das angegebene Bild kann nicht geoeffnet werden.");
-        }
-        //printf("Bild kann geoeffnet werden!\n");
-        char magicNumber[3];
-        fscanf(inputFile, "%s", magicNumber);
-        if (strcmp(magicNumber, "P6") != 0) {
-            // Fehlermeldung wegen falsches Bildformat
-            printf("here\n");
-            fprintf(stderr, "Ungueltiges Dateiformat. Es wird ein P6 PPM-Bild erwartet.\n");
-            fclose(inputFile);
+            // Error while trying open the giving picture
+            perror("The giving picutre can not be opened. For more information please use the option -h | --help");
             return 1;
         }
-        //printf("Header erste Zeile stimmt\n");
-        int ch;
-        while(1) {
-            while((ch=fgetc(inputFile)) == ' '); // whitespace überspringen
-            if (ch == '#') {
-                while((ch=fgetc(inputFile)) != '\n'); // Kommentar überspringen
-            } else {
-                ungetc(ch, inputFile); //letzte gelesene Zeichen zurückgehen
-                break;
-            }
+        int width, height, maxColorValue;
+        if (read_ppm_header(inputFile, &width, &height, &maxColorValue) == 1) {
+            return 1;
         }
-        int width;
-        fscanf(inputFile, "%d", &width);
-        while(1) {
-            while((ch=fgetc(inputFile)) == ' '); // whitespace überspringen
-            if (ch == '#') {
-                while((ch=fgetc(inputFile)) != '\n'); // Kommentar überspringen
-            } else {
-                ungetc(ch, inputFile); //letzte gelesene Zeichen zurückgehen
-                break;
-            }
-        }
-        int height;
-        fscanf(inputFile, "%d", &height);
-        while(1) {
-            while((ch=fgetc(inputFile)) == ' '); // whitespace überspringen
-            if (ch == '#') {
-                while((ch=fgetc(inputFile)) != '\n'); // Kommentar überspringen
-            } else {
-                ungetc(ch, inputFile); //letzte gelesene Zeichen zurückgehen
-                break;
-            }
-        }
-        int maxColorValue;
-        fscanf(inputFile, "%d", &maxColorValue);
         printf("Width, height, maxColorValue: %i, %i, %i\n", width, height, maxColorValue);
-        if (maxColorValue > 255) {
-            // Fehlermeldung wegen falsches Bildformat
-            fprintf(stderr, "Ungueltiger Maximalwert für die Farben. Es wird ein Wert von 255 erwartet.\n");
-            fclose(inputFile);
-            return 1;
-        }
-        if (maxColorValue == 0) {
-            // Fehlermeldung wegen falsches Bildformat
-            fprintf(stderr, "Ungueltiger Maximalwert für die Farben. Null als Wer ist nicht erlaubt.\n");
-            fclose(inputFile);
-            return 1;
-        }
-        //printf("Header stimmt vollständig\n");
+
         int imageSize = width * height;
         uint8_t* pixels = (uint8_t*)malloc(imageSize * 3 * sizeof(uint8_t));
         if (pixels == NULL) {
-            // Fehler beim Allizieren des Speichers
-            printf("Fehler beim Allozieren des Speichers.\n");
+            // Error by allocating memory
+            perror("Error by allocating memory");
             fclose(inputFile);
             return 1;
         }
         
-        fgetc(inputFile); // new line character
+        //fgetc(inputFile); // new line character
         fread(pixels, sizeof(uint8_t), imageSize*3, inputFile);
         fclose(inputFile);
         //printf("Berechnung startet\n");
 
-        // Berechnung
+        // Calculation
         if (benchmark == 1) {
-            // Laufzeit wird gemessen und ausgegeben
+            // measuaring duration
             // Noch nicht implementiert
             if (repetitions < 1) { repetitions = 1; }
-            // oder doch mit Fehlermeldung abbrechen?
             for (int i = 1; i < repetitions; i++) {
-                // Programm ausführen
+                // call the functions 
             }
-            printf("Anzahl der Wiederholungen: %d \n", repetitions);
+            printf("Times of repetitions: %d \n", repetitions);
             return 0;
         }
-        float* temp = (float*)malloc(imageSize * sizeof(float));
+        uint8_t* temp = (uint8_t*)malloc(imageSize * sizeof(uint8_t));
         if (temp == NULL) {
-            // Fehler beim Allizieren des Speichers
-            printf("Fehler beim Allozieren des Speichers.\n");
+            // Error by allocating memory
+            perror("Error by allocating memory");
             return 1;
         }
         uint8_t* result = (uint8_t*)malloc(imageSize * scaling * scaling * sizeof(uint8_t));
         if (result == NULL) {
-            // Fehler beim Allizieren des Speichers
-            printf("Fehler beim Allozieren des Speichers.\n");
+            // Error by allocating memory
+            perror("Error by allocating memory");
             return 1;
         }
         
-        // Berechnung
+        // Calculation 
         interpolate(pixels, width, height, a, b, c, scaling, temp, result);
 
-        // Abspeichern
+        // Saving the result picture 
         FILE* outputFile = fopen(outputFileName, "wb");
         if (outputFile == NULL) {
-            fprintf(stderr, "Ungueltiges Ausgabedateiformat. Es wird ein P5 PGM-Bild erwartet.\n");
+            // Error opening the outputfile 
+            perror("Error by opening the outputfile. For more information please use the option -h | --help.");
             fclose(outputFile);
             return 1;
         }
@@ -609,7 +616,7 @@ int main(int argc, char **argv){
         }
         
         // Berechnung
-        interpolate1(img, width, height, a, b, c, scaling, temp, result);
+        interpolate(img, width, height, a, b, c, scaling, temp, result);
 
         // Abspeichern
         FILE* outputFile = fopen(outputFileName, "wb");
@@ -627,7 +634,7 @@ int main(int argc, char **argv){
         free(temp);
         free(pixels);
     } else {
-        // Andere Implementierung ???
+        //another implementation ??? 
     }
 
     return 0;
