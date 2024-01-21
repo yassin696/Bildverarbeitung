@@ -25,21 +25,20 @@ void grayscale_naiv(const uint8_t* img, size_t width, size_t height, float a, fl
 }
 
 // grayscale optimized with look-up tables
-void gentable(float coeff, float* array) {
-   // generate look-up tables
+void gentable(float coeff, uint8_t* array) {
     for (int i = 0; i < 256; ++i) {
-        array[i] = (i * coeff);
+        array[i] = (uint8_t)(i * coeff);
     }
 }
 
 void grayscale_look_up(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
-    // the tables are smaller than 1 MB, which a modern computer has as the stack for a process
-    float* tableA = malloc(256 * sizeof(float));
-    float* tableB = malloc(256 * sizeof(float));
-    float* tableC = malloc(256 * sizeof(float));
+    uint8_t* tableA = malloc(256 * sizeof(uint8_t));
+    uint8_t* tableB = malloc(256 * sizeof(uint8_t));
+    uint8_t* tableC = malloc(256 * sizeof(uint8_t));
     gentable(a, tableA);
     gentable(b, tableB);
     gentable(c, tableC);
+
     size_t size = height * width;
     for (size_t i = 0; i < size; ++i) {
         uint8_t R = img[i];
@@ -47,13 +46,15 @@ void grayscale_look_up(const uint8_t* img, size_t width, size_t height, float a,
         uint8_t B = img[size + size + i];
 
         // Lookup precomputed values from tables
-        float weightedSum = tableA[R] + tableB[G] + tableC[B];
-        tmp[i] =(uint8_t)weightedSum;
+        uint8_t weightedSum = tableA[R] + tableB[G] + tableC[B];
+        tmp[i] = weightedSum;
     }
+
     free(tableA);
     free(tableB);
     free(tableC);
 }
+
 
 // grayscale optimiyed with SIMD
 void grayscale_simd(const uint8_t* img, int width, int height, float a, float b, float c, uint8_t* tmp) {
@@ -624,4 +625,4 @@ int main(int argc, char **argv){
     }
 
     return 0;
-}
+}   
