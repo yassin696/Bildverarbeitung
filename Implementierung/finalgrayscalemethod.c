@@ -70,8 +70,10 @@ void grayscale(const uint8_t* img, size_t width, size_t height, float a, float b
     __m128 Ra;
     __m128 Gb;
     __m128 Bc;
+
+    size_t i;
     // Process four pixels at a time
-    for (size_t i = 0; i < (height * width * 3)-((height*width*3 )%12); i += 12) {
+    for (i = 0; i < (height * width * 3)-((height*width*3 )%12); i += 12) {
         // Load pixel values as floats using SIMD instruction _mm_set_ps for R, G, B channels
          pixelR = _mm_set_ps((float)img[i+9], (float)img[i+6], (float)img[i+3], (float)img[i]);
          pixelG = _mm_set_ps((float)img[i+10], (float)img[i+7], (float)img[i+4], (float)img[i+1]);
@@ -90,7 +92,7 @@ void grayscale(const uint8_t* img, size_t width, size_t height, float a, float b
      }
 
     // Handle any remaining pixels
-    for (size_t i ; i < height * width * 3; i += 3) {
+    for ( i ; i < height * width * 3; i += 3) {
      
         result[i/3] =  a *img[i] + b * img[i+1] + c * img[i+2];
     }
