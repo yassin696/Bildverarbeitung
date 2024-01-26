@@ -131,7 +131,7 @@ void simdInterpolate(const float* inputArray, uint8_t* result, size_t width, siz
 }
 
 //new naiv interpolation
-void interpolate100(const uint8_t* inputArray, uint8_t* result, size_t width, size_t height, size_t factor) {
+void interpolate100(const float* inputArray, uint8_t* result, size_t width, size_t height, size_t factor) {
     size_t scaledW = width * factor;  // Scaled width
     size_t scaledH = height * factor; // Scaled height
     float invFactor = 1.0f / factor; // Inverse of the scaling factor
