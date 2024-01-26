@@ -105,6 +105,7 @@ void grayscale_simd(const uint8_t* img, size_t width, size_t height, float a, fl
 
 // naive interpolation calculation 
 void interpolation_calculation_naive(size_t width, size_t height, int scale_factor, uint8_t* tmp, uint8_t* result) {
+    float* inputArray = (float*) tmp;
     int scaledW = width * scale_factor;  // Scaled width
     int scaledH = height * scale_factor; // Scaled height
     float invFactor = 1.0f / scale_factor; // Inverse of the scaling factor
@@ -123,10 +124,10 @@ void interpolation_calculation_naive(size_t width, size_t height, int scale_fact
             int xNextIdx = ((xScaled + scale_factor) / scale_factor) % width;
 
             // Fetch the pixel values from the four surrounding corners
-            uint8_t Q11 = tmp[yIdx * width + xIdx];
-            uint8_t Q21 = tmp[yIdx * width + xNextIdx];
-            uint8_t Q12 = tmp[yNextIdx * width + xIdx];
-            uint8_t Q22 = tmp[yNextIdx * width + xNextIdx];
+            uint8_t Q11 = inputArray[yIdx * width + xIdx];
+            uint8_t Q21 = inputArray[yIdx * width + xNextIdx];
+            uint8_t Q12 = inputArray[yNextIdx * width + xIdx];
+            uint8_t Q22 = inputArray[yNextIdx * width + xNextIdx];
 
             // Calculate interpolation coefficients
             float a = oneMinusGx * oneMinusGy;
