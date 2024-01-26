@@ -8,20 +8,18 @@
 #include <errno.h>
 #include <immintrin.h>
 #include <emmintrin.h>
+#include <omp.h>
 
 
 // naive grayscale-solution
 void grayscale_naiv(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
-    size_t i = 0;
-    int j = 0;
-    while (i < height * width * 3) {
+    #pragma omp for
+    for (size_t i = 0; i < height * width * 3; i += 3) {
         uint8_t R = img[i];
         uint8_t G = img[i + 1];
         uint8_t B = img[i + 2];
         uint8_t D = round(R * a + G * b + B * c);
-        tmp[j] = D;
-        i += 3;
-        j += 1;
+        tmp[i/3] = D;
     }
 }
 
@@ -39,8 +37,9 @@ void grayscale_look_up(const uint8_t* img, size_t width, size_t height, float a,
     gentable(a, tableA);
     gentable(b, tableB);
     gentable(c, tableC);
-
+    
     size_t size = height * width;
+    #pragma omp for
     for (size_t i = 0; i < size; ++i) {
         uint8_t R = img[i];
         uint8_t G = img[size + i];
@@ -73,6 +72,7 @@ void bilinear_interpolate_naive(uint8_t* tmp, size_t width, size_t height, size_
 
             // Für jeden einzelnen Wert in den Quadraten berechne nach Formel den Wert
             for(size_t y=0;y<scale_factor;y++) {
+                #pragma omp for
                 for (size_t x = 0; x < scale_factor; x++) {
 
                     // berechne position im finalen AllozSpeicher

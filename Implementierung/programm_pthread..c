@@ -8,22 +8,98 @@
 #include <errno.h>
 #include <immintrin.h>
 #include <emmintrin.h>
+#include <pthread.h>
+
+ 
+
+void grayscale_naiv_parallel(const uint8_t *img, size_t width, size_t height, float a, float b, float c, uint8_t *tmp) {
+    
+    typedef struct {
+        const uint8_t *img;
+        float a, b, c;
+        uint8_t *tmp;
+        size_t start;
+        size_t end;
+    } grayscaleData;
+    
+    void* grayscale_naiv_pthread(void* arg) {
+        grayscaleData* data = (grayscaleData*) arg;
+        for (size_t i = data->start; i < data->end; i+=3) {
+            uint8_t R = data->img[data->start+i];
+            uint8_t G = data->img[data->start+i+1];
+            uint8_t B = data->img[data->start+i+2];
+            uint8_t D = (uint8_t)round(R * data->a + G * data->b + B * data->c);
+            data->tmp[(data->start) + i / 3] = D;
+        }
+        pthread_exit(NULL);
+        return NULL;
+    }
+    
+    int threadNum = 4;
+    pthread_t threads[threadNum];
+    grayscaleData data[threadNum];
+    size_t rows = height / threadNum;
+
+    for (int i = 0; i < threadNum; i++) {
+        data[i].img = img;
+        data[i].a = a;
+        data[i].b = b;
+        data[i].c = c;
+        data[i].tmp = tmp;
+        data[i].start = i * rows * width;
+        data[i].end = (i + 1) * rows * width;
+        pthread_create(&threads[i], NULL, grayscale_naiv_pthread, (void*)&data[i]);
+    }
+
+    for (int i = 0; i < threadNum; i++) {
+        pthread_join(threads[i], NULL);
+    }
+}
+
+void grayscale_naiv_parallel1(const uint8_t *img, size_t width, size_t height, float a, float b, float c, uint8_t *tmp) {
+    
+    typedef struct {
+        size_t start;
+        size_t end;
+    } grayscaleData;
+    
+    void* grayscale_naiv_pthread(void* arg) {
+        grayscaleData* data = (grayscaleData*) arg;
+        for (size_t i = data->start; i < data->end; i+=3) {
+            uint8_t R = img[data->start+i];
+            uint8_t G = img[data->start+i+1];
+            uint8_t B = img[data->start+i+2];
+            uint8_t D = (uint8_t)round(R * a + G * b + B * c);
+            tmp[(data->start) + i / 3] = D;
+        }
+        pthread_exit(NULL);
+        return NULL;
+    }
+    
+    int threadNum = 4;
+    pthread_t threads[threadNum];
+    grayscaleData data[threadNum];
+    size_t rows = height / threadNum;
+
+    for (int i = 0; i < threadNum; i++) {
+        //data[i].img = img;
+        //data[i].a = a;
+        //data[i].b = b;
+        //data[i].c = c;
+        //data[i].tmp = tmp;
+        data[i].start = i * rows * width;
+        data[i].end = (i + 1) * rows * width;
+        pthread_create(&threads[i], NULL, grayscale_naiv_pthread, (void*)&data[i]);
+    }
+
+    for (int i = 0; i < threadNum; i++) {
+        pthread_join(threads[i], NULL);
+    }
+}
 
 
 // naive grayscale-solution
-void grayscale_naiv(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
-    size_t i = 0;
-    int j = 0;
-    while (i < height * width * 3) {
-        uint8_t R = img[i];
-        uint8_t G = img[i + 1];
-        uint8_t B = img[i + 2];
-        uint8_t D = round(R * a + G * b + B * c);
-        tmp[j] = D;
-        i += 3;
-        j += 1;
-    }
-}
+
 
 // grayscale optimized with look-up tables
 void gentable(float coeff, uint8_t* array) {
@@ -39,7 +115,7 @@ void grayscale_look_up(const uint8_t* img, size_t width, size_t height, float a,
     gentable(a, tableA);
     gentable(b, tableB);
     gentable(c, tableC);
-
+    
     size_t size = height * width;
     for (size_t i = 0; i < size; ++i) {
         uint8_t R = img[i];
@@ -103,10 +179,10 @@ void bilinear_interpolate_naive(uint8_t* tmp, size_t width, size_t height, size_
 void interpolate(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
     // grayscale naive
     if (scale_factor == 1) {
-        grayscale_naiv(img, width, height, a, b, c, tmp);
+        grayscale_naiv_parallel1(img, width, height, a, b, c, tmp);
         return;
     } 
-    grayscale_naiv(img, width, height, a, b, c, tmp);
+    grayscale_naiv_parallel1(img, width, height, a, b, c, tmp);
 
     // interpolation naive
     bilinear_interpolate_naive(tmp, width, height, scale_factor, result);

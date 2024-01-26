@@ -9,7 +9,6 @@
 #include <immintrin.h>
 #include <emmintrin.h>
 
-
 // naive grayscale-solution
 void grayscale_naiv(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
     size_t i = 0;
@@ -47,8 +46,8 @@ void grayscale_look_up(const uint8_t* img, size_t width, size_t height, float a,
         uint8_t B = img[size + size + i];
 
         // Lookup precomputed values from tables
-        uint8_t result = tableA[R] + tableB[G] + tableC[B];
-        tmp[i] = result;
+        uint8_t weightedSum = tableA[R] + tableB[G] + tableC[B];
+        tmp[i] = weightedSum;
     }
 
     free(tableA);
@@ -127,17 +126,6 @@ void interpolate_optimized1(const uint8_t* img, size_t width, size_t height, flo
 }
 
 // interpolate with optimiyed grayscale (SIMD)
-void interpolate_optimized2(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
-    // grayscale optimized with look-up tables
-    if (scale_factor == 1) {
-        //grayscale_simd(img, width, height, a, b, c, tmp);
-        return;
-    }
-    //grayscale_simd(img, width, height, a, b, c, tmp);
-
-    // interpolation naive
-    bilinear_interpolate_naive(tmp, width, height, scale_factor, result);
-}
 
 
 // framework
@@ -327,10 +315,6 @@ uint8_t* read_ppm(char* inputFileName, int* width, int* height, int* imageSize) 
     }
     fgetc(inputFile); // new line character after end of the header
     fread(pixels, sizeof(uint8_t), *(imageSize)*3, inputFile);
-    int ch = fgetc(inputFile);
-    if (ch != EOF) {
-        // more than 1 picture in the serie
-    }
     fclose(inputFile);
     uint8_t* check_pixels = pixels;
     for (int i = 0; i < *(imageSize)*3; i++) {
@@ -338,9 +322,11 @@ uint8_t* read_ppm(char* inputFileName, int* width, int* height, int* imageSize) 
             // Error because a pixels is greater than the maxColorValue
             errno = EINVAL;
             perror("Invalid value for pixels. RGB-Value of a pixel must be smaller than the max color. For more information please use the option -h | --help");
+            fclose(inputFile);
             return NULL;
         }
     }
+    fclose(inputFile);
     return pixels;
 }
 
@@ -433,178 +419,69 @@ int main(int argc, char **argv){
     }
 
     // program with checking user inputs and calculation
-    if (implementation == 0) {
-        // standard implementation
-        printf("Standard implementation\n");
+    // prepare for the grayscale and interpolation
 
-        // check user inputs
-        check_user_input(&a, &b, &c, &scaling, outputFileName);
+    // check user inputs
+    check_user_input(&a, &b, &c, &scaling, outputFileName);
 
-        // read ppm
-        int width; int height; int imageSize;
-        uint8_t* pixels = read_ppm(inputFileName, &width, &height, &imageSize);
-        if (pixels == NULL) {
-            return 1; // error by reading ppm
-        }
-        
-        // allocating memories 
-        uint8_t* temp = (uint8_t*)malloc((imageSize * sizeof(uint8_t)) + (imageSize * scaling * scaling * sizeof(uint8_t)));
-        if (temp == NULL) {
-            // Error by allocating memory
-            perror("Error by allocating memory");
-            return 1;
-        }
-        uint8_t* result = temp + (imageSize * sizeof(uint8_t));
-        if (result == NULL) {
-            // Error by allocating memory
-            perror("Error by allocating memory");
-            return 1;
-        }
-        // result is a part of the allocated memory for temp. The interpolated picture will be saved by result, the grayscale by temp
-        
-        // Calculation
-        if (benchmark == 1) {
-            // measuaring duration
-            // Noch nicht implementiert
-            if (repetitions < 1) { repetitions = 1; }
-            for (int i = 1; i < repetitions; i++) {
-                // call the functions 
-            }
-            printf("Times of repetitions: %d \n", repetitions);
-            return 0;
-        }
-        
-        // grayscale and interpolation  
-        interpolate(pixels, width, height, a, b, c, scaling, temp, result);
-        free(pixels);
-
-        // Saving the result picture 
-        if (scaling == 1) {
-            if (write_ppm(outputFileName, width, height, scaling, temp) == 1) {
-                return 1;
-            }
-        } else {
-            if (write_ppm(outputFileName, width, height, scaling, result) == 1) { 
-                return 1;
-            }
-        }
-        free(temp);
-        
-    } else if (implementation == 1) {
-        printf("Grayscale optimized with Lookup\n");
-
-        // check user inputs
-        check_user_input(&a, &b, &c, &scaling, outputFileName);
-
-        // read ppm
-        int width; int height; int imageSize;
-        uint8_t* pixels = read_ppm(inputFileName, &width, &height, &imageSize);
-        if (pixels == NULL) {
-            return 1; // error by reading ppm
-        }
-        
-        // allocating memories 
-        uint8_t* temp = (uint8_t*)malloc((imageSize * sizeof(uint8_t)) + (imageSize * scaling * scaling * sizeof(uint8_t)));
-        if (temp == NULL) {
-            // Error by allocating memory
-            perror("Error by allocating memory");
-            return 1;
-        }
-        uint8_t* result = temp + (imageSize * sizeof(uint8_t));
-        if (result == NULL) {
-            // Error by allocating memory
-            perror("Error by allocating memory");
-            return 1;
-        }
-        // result is a part of the allocated memory for temp. The interpolated picture will be saved by result, the grayscale by temp
-
-        // Calculation
-        if (benchmark == 1) {
-            // measuaring duration
-            // Noch nicht implementiert
-            if (repetitions < 1) { repetitions = 1; }
-            for (int i = 1; i < repetitions; i++) {
-                // call the functions 
-            }
-            printf("Times of repetitions: %d \n", repetitions);
-            return 0;
-        }
-        
-        // grayscale and interpolation  
-        interpolate_optimized1(pixels, width, height, a, b, c, scaling, temp, result);
-        free(pixels);
-
-        // Saving the result picture 
-        if (scaling == 1) {
-            if (write_ppm(outputFileName, width, height, scaling, temp) == 1) {
-                return 1;
-            }
-        } else {
-            if (write_ppm(outputFileName, width, height, scaling, result) == 1) { 
-                return 1;
-            }
-        }
-        free(temp);
-
-    } else if (implementation == 2) {
-        printf("Grayscale optimized with SIMD\n");
-
-        // check user inputs
-        check_user_input(&a, &b, &c, &scaling, outputFileName);
-
-        // read ppm
-        int width; int height; int imageSize;
-        uint8_t* pixels = read_ppm(inputFileName, &width, &height, &imageSize);
-        if (pixels == NULL) {
-            return 1; // error by reading ppm
-        }
-        
-        // allocating memories 
-        uint8_t* temp = (uint8_t*)malloc((imageSize * sizeof(uint8_t)) + (imageSize * scaling * scaling * sizeof(uint8_t)));
-        if (temp == NULL) {
-            // Error by allocating memory
-            perror("Error by allocating memory");
-            return 1;
-        }
-        uint8_t* result = temp + (imageSize * sizeof(uint8_t));
-        if (result == NULL) {
-            // Error by allocating memory
-            perror("Error by allocating memory");
-            return 1;
-        }
-        // result is a part of the allocated memory for temp. The interpolated picture will be saved by result, the grayscale by temp
-
-        // Calculation
-        if (benchmark == 1) {
-            // measuaring duration
-            // Noch nicht implementiert
-            if (repetitions < 1) { repetitions = 1; }
-            for (int i = 1; i < repetitions; i++) {
-                // call the functions 
-            }
-            printf("Times of repetitions: %d \n", repetitions);
-            return 0;
-        }
-        
-        // grayscale and interpolation  
-        interpolate_optimized2(pixels, width, height, a, b, c, scaling, temp, result);
-        free(pixels);
-
-        // Saving the result picture 
-        if (scaling == 1) {
-            if (write_ppm(outputFileName, width, height, scaling, temp) == 1) {
-                return 1;
-            }
-        } else {
-            if (write_ppm(outputFileName, width, height, scaling, result) == 1) { 
-                return 1;
-            }
-        }
-        free(temp);
-        
-    } else {
-        //another implementation ??? 
+    // read ppm
+    int width; int height; int imageSize;
+    const uint8_t* pixels = read_ppm(inputFileName, &width, &height, &imageSize);
+    if (pixels == NULL) {
+        return 1; // error by reading ppm
     }
+        
+    // allocating memories 
+    uint8_t* temp = (uint8_t*)malloc((imageSize * sizeof(uint8_t)) + (imageSize * scaling * scaling * sizeof(uint8_t)));
+    if (temp == NULL) {
+        // Error by allocating memory
+        perror("Error by allocating memory");
+        return 1;
+    }
+    uint8_t* result = temp + (imageSize * sizeof(uint8_t));
+    if (result == NULL) {
+        // Error by allocating memory
+        perror("Error by allocating memory");
+        return 1;
+    }
+    // result is a part of the allocated memory for temp. The interpolated picture will be saved by result, the grayscale by temp
+    
+    // Calculation with different implementations
+    switch (implementation) {
+        case 0:
+            // standard implementation
+            printf("Standard implementation\n");
+            if (benchmark == 1) {
+                // measuaring duration
+                // Noch nicht implementiert
+                if (repetitions < 1) { repetitions = 1; }
+                for (int i = 1; i < repetitions; i++) {
+                    // call the functions 
+                }
+                printf("Times of repetitions: %d \n", repetitions);
+                break;
+            }
+            
+            // grayscale and interpolation  
+            interpolate(pixels, width, height, a, b, c, scaling, temp, result);
+            break;
+
+        default:
+            break;
+    }
+    // Saving the result picture 
+    if (scaling == 1) {
+        if (write_ppm(outputFileName, width, height, scaling, temp) == 1) {
+            free(temp);
+            return 1;
+        }
+    } else {
+        if (write_ppm(outputFileName, width, height, scaling, result) == 1) { 
+            free(temp);
+            return 1;
+        }
+    }
+    free(temp);
 
     return 0;
 }   
