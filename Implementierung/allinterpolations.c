@@ -61,8 +61,8 @@ void processEdge(const float* inputArray, uint8_t* result, size_t width, size_t 
                 // Calculate the final interpolated values and assign them to the result
                 for (size_t f = 0; f < factor; f++) {
                     result[(h * factor + f) * width * factor + (b * factor + f1)] =
-                        ((float)(factor - f) / factor) * val1 +
-                        ((float)f / factor) * val2 + 0.5f; // Adding 0.5f for rounding
+                        (((float)(factor - f) / factor) * val1 +
+                        ((float)f / factor) * val2) + 0.5f; // Adding 0.5f for rounding
                 }
             }
         }
@@ -70,16 +70,20 @@ void processEdge(const float* inputArray, uint8_t* result, size_t width, size_t 
 }
 
 void simdInterpolate(const float* inputArray, uint8_t* result, size_t width, size_t height, size_t factor) {
-    size_t scaledWidth = width * factor;
+    size_t scaledWidth = width * factor;//calculate new width
     float invFactor = 1.0f / factor;  // Inverse of scaling factor for coefficient calculation
 
     // Allocate memory for precomputed interpolation coefficients a b c d
     float* coeffTable = (float*)malloc(sizeof(float) * factor * factor * 4); 
+
+    float gx,gy;//initialise intermediate values
+    size_t index,x,y,sectorBaseX,sectorBaseY,coeffIndex,resultIndex;//initlialise indexes
+    __m128 Q00,Qs0,Q0s,Qss,a,b,c,d,interpolated,coeff;//initialise intermediate values and final interpolated value
     for (size_t i = 0; i < factor; i++) {
         for (size_t j = 0; j < factor; j++) {
-            float gx = j * invFactor;
-            float gy = i * invFactor;
-            size_t index = (i * factor + j) * 4;
+             gx = j * invFactor;
+             gy = i * invFactor;
+             index = (i * factor + j) * 4;
             // Precompute bilinear interpolation coefficients for each sub-pixel position
             coeffTable[index] = (1 - gx) * (1 - gy);     // Coefficient a
             coeffTable[index + 1] = gx * (1 - gy);       // Coefficient b
@@ -89,34 +93,34 @@ void simdInterpolate(const float* inputArray, uint8_t* result, size_t width, siz
     }
 
     //  SIMD processing loop over the image
-    for (size_t y = 0; y < height - 1; y++) {
-        for (size_t x = 0; x < width - 1; x += 4) { 
-            // Load pixel values for Q11, Q12, Q21, Q22 using SIMD
-            __m128 Q11 = _mm_loadu_ps(&inputArray[y * width + x]);
-            __m128 Q21 = _mm_loadu_ps(&inputArray[(y + 1) * width + x]);
-            __m128 Q12 = _mm_loadu_ps(&inputArray[y * width + x + 1]);
-            __m128 Q22 = _mm_loadu_ps(&inputArray[(y + 1) * width + x + 1]);
+    for (y = 0; y < height - 1; y++) {
+        for ( x = 0; x < (width - 1)-((width-1)%4); x += 4) { 
+            // Load pixel values for Q00, Q0s, Qs0, Qss using SIMD
+             Q00 = _mm_loadu_ps(&inputArray[y * width + x]);
+             Q0s = _mm_loadu_ps(&inputArray[(y + 1) * width + x]);
+             Qs0 = _mm_loadu_ps(&inputArray[y * width + x + 1]);
+             Qss = _mm_loadu_ps(&inputArray[(y + 1) * width + x + 1]);
 
             // Iterate over each sub-pixel position within the pixel
             for (size_t i = 0; i < factor; i++) {
                 for (size_t j = 0; j < factor; j++) {
-                    size_t coeffIndex = (i * factor + j) * 4;
-                    __m128 coeff = _mm_loadu_ps(&coeffTable[coeffIndex]);
+                     coeffIndex = (i * factor + j) * 4;
+                     coeff = _mm_loadu_ps(&coeffTable[coeffIndex]);
 
                     // Load the precomputed coefficients into SIMD 128bit registers
-                    __m128 a = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(0, 0, 0, 0));
-                    __m128 b = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(1, 1, 1, 1));
-                    __m128 c = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(2, 2, 2, 2));
-                    __m128 d = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(3, 3, 3, 3));
+                     a = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(0, 0, 0, 0));
+                     b = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(1, 1, 1, 1));
+                     c = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(2, 2, 2, 2));
+                     d = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(3, 3, 3, 3));
 
                     // Perform bilinear interpolation using SIMD
-                    __m128 interpolated = _mm_add_ps(_mm_add_ps(_mm_mul_ps(a, Q11), _mm_mul_ps(b, Q12)), _mm_add_ps(_mm_mul_ps(c, Q21), _mm_mul_ps(d, Q22)));
+                     interpolated = _mm_add_ps(_mm_add_ps(_mm_mul_ps(a, Q00), _mm_mul_ps(b, Qs0)), _mm_add_ps(_mm_mul_ps(c, Q0s), _mm_mul_ps(d, Qss)));
 
                     // Store the interpolated results into the result buffer
                     for (size_t k = 0; k < 4; k++) {
-                        size_t sectorBaseX = (x + k) * factor;
-                        size_t resultIndex = (y * factor + i) * scaledWidth + sectorBaseX + j;
-                        result[resultIndex] = (uint8_t)(interpolated[k] + 0.5f); // Convert to uint8_t with rounding
+                         sectorBaseX = (x + k) * factor;
+                         resultIndex = (y * factor + i) * scaledWidth + sectorBaseX + j;
+                        result[resultIndex] = (interpolated[k] + 0.5f); // Convert to uint8_t with rounding
                     }
                 }
             }
@@ -124,11 +128,14 @@ void simdInterpolate(const float* inputArray, uint8_t* result, size_t width, siz
     }
 
     // Process the edge cases by calling 
-    processEdge(inputArray, result, width, height, factor, width - 1, 0); // Rightmost column
-    processEdge(inputArray, result, width, height, factor, 0, height - 1); // Bottom row
+    processEdge(inputArray, result, width, height, factor,(width - 1)-((width-1)%4), 0); // Rightmost column
+    processEdge(inputArray, result, width, height, factor, 0, height-1); // Bottom row
 
     free(coeffTable); // Free the allocated memory for coefficients
 }
+
+
+
 
 //new naiv interpolation
 void interpolate100(const float* inputArray, uint8_t* result, size_t width, size_t height, size_t factor) {
