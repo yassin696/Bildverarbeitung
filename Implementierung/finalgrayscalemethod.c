@@ -13,7 +13,7 @@ void gentable(float coeff, float* table) {
     }
 }
 
-void grayscalePrecomputed(const uint8_t* img, int width, int height, float a, float b, float c, uint8_t* result) {
+void grayscalePrecomputed(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* result) {
     printf("grayscale with precomputed tables\n");
 float* result =(float*)(result);
     // Generate tables for coefficients
@@ -56,7 +56,7 @@ void grayscale1(const uint8_t* img, size_t width, size_t height, float a, float 
         tmp[i/3] =  (a *R + b * G + c * B);
 }
 }
-void grayscale(const uint8_t* img, int width, int height, float a, float b, float c, uint8_t* result) {
+void grayscale(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* result) {
     float* result =(float*)(result);
     // Prepare SIMD constants for coefficients
     __m128 coefA = _mm_set1_ps(a);
