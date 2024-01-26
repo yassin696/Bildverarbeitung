@@ -14,5 +14,4 @@ interpolate: programm6.c
 clean:
 	rm -f interpolate
 
-run: interpolate
-	./interpolate
+
