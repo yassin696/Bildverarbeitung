@@ -6,9 +6,28 @@
 #include <time.h>
 #include <math.h>
 
+//naiv grayscale implementation
+void grayscale1(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmpa) {
+ //   float* tmp =(float*)(tmp);
+    //initialise the R G and B values
+    uint8_t R;
+    uint8_t G;
+    uint8_t B;
+    float D;
+    for (size_t i=0;i < height * width * 3;i+=3) {
+        //loading the colours' variables 
+        R= img[i];
+        G= img[i+1];
+        B= img[i+2];
+       
+        //calculate the grayscale D value round it and store it to its corresponding place
+        tmpa[i/3] =  (a *R + b * G + c * B);
+}
+}
+
 //algorithmically optimised interpolation
 void interpolationopt(float* inputArray, uint8_t* result, size_t width, size_t height, size_t factor) {
-   float v1_1, v1_2, v2_1, v2_2; // Variables to store pixel values for interpolation
+   float Q00, Qs0, Q0s, Qss; // Variables to store pixel values for interpolation
    float val1, val2; // Intermediate values for bilinear interpolation
 
    // Iterate over height
@@ -16,16 +35,16 @@ void interpolationopt(float* inputArray, uint8_t* result, size_t width, size_t h
        // Iterate over width
        for (size_t b = 0; b < width; b++) {
            // Get the pixel values for the current and adjacent pixels
-           v1_1 = inputArray[b + h * width]; // Current pixel 
-           v1_2 = inputArray[(b + 1) % width + h * width]; // Right neighbor
-           v2_1 = inputArray[b + ((h + 1) % height) * width]; // Bottom neighbor
-           v2_2 = inputArray[(b + 1) % width + ((h + 1) % height) * width]; // Diagonal neighbor
+           Q00 = inputArray[b + h * width]; // Current pixel 
+           Qs0 = inputArray[(b + 1) % width + h * width]; // Right neighbor
+           Q0s = inputArray[b + ((h + 1) % height) * width]; // Bottom neighbor
+           Qss = inputArray[(b + 1) % width + ((h + 1) % height) * width]; // Diagonal neighbor
 
            // Perform bilinear interpolation for each subpixel within the current sector
            for (size_t f1 = 0; f1 < factor; f1++) {
                // Calculate intermediate values
-               val1 = ((float)(factor - f1) / factor) * v1_1 + ((float)f1 / factor) * v1_2;
-               val2 = ((float)(factor - f1) / factor) * v2_1 + ((float)f1 / factor) * v2_2;
+               val1 = ((float)(factor - f1) / factor) * Q00 + ((float)f1 / factor) * Qs0;
+               val2 = ((float)(factor - f1) / factor) * Q0s + ((float)f1 / factor) * Qss;
 
                // Calculate the final interpolated values and assign them to the result
                for (size_t f = 0; f < factor; f++) {
@@ -137,42 +156,44 @@ void simdInterpolate(const float* inputArray, uint8_t* result, size_t width, siz
 
 
 
-//new naiv interpolation
+// New naive interpolation
 void interpolate100(const float* inputArray, uint8_t* result, size_t width, size_t height, size_t factor) {
-    size_t scaledW = width * factor;  // Scaled width
-    size_t scaledH = height * factor; // Scaled height
-    float invFactor = 1.0f / factor; // Inverse of the scaling factor
+    // Calculate scaled width and height
+    size_t scaledW = width * factor;  
+    size_t scaledH = height * factor; 
+
+    // Inverse factor for interpolation
+    float invFactor = 1.0f / factor;
+
+    // Initialize variables outside the loops
+    float gy, oneMinusGy, gx, oneMinusGx;
+    size_t yIdx, yNextIdx, xIdx, xNextIdx;
+    float Q00, Qs0, Q0s, Qss;
+    float val1, val2;
 
     // Iterate over each pixel in the scaled image
     for (size_t yScaled = 0; yScaled < scaledH; yScaled++) {
-        //redundant intermediate calculated values
-        float gy = (float)(yScaled % factor) * invFactor;
-        float oneMinusGy = 1.0f - gy;
-        size_t yIdx = (yScaled / factor) % height;
-        size_t yNextIdx = ((yScaled + factor) / factor) % height;
+        //precalculate  intermediate values
+        gy = (float)(yScaled % factor) * invFactor;
+        oneMinusGy = 1.0f - gy;
+        //calculate indexes for the given 
+        yIdx = yScaled / factor;
+        yNextIdx = (yIdx + 1) % height;
 
         for (size_t xScaled = 0; xScaled < scaledW; xScaled++) {
-                    //intermediate calculated values
+            gx = (float)(xScaled % factor) * invFactor;
+            oneMinusGx = 1.0f - gx;
+            xIdx = xScaled / factor;
+            xNextIdx = (xIdx + 1) % width;
 
-            float gx = (float)(xScaled % factor) * invFactor;
-            float oneMinusGx = 1.0f - gx;
-            size_t xIdx = (xScaled / factor) % width;
-            size_t xNextIdx = ((xScaled + factor) / factor) % width;
-
-            // Fetch the pixel values from the four surrounding corners
-            uint8_t Q11 = inputArray[yIdx * width + xIdx];
-            uint8_t Q21 = inputArray[yIdx * width + xNextIdx];
-            uint8_t Q12 = inputArray[yNextIdx * width + xIdx];
-            uint8_t Q22 = inputArray[yNextIdx * width + xNextIdx];
-
-            // Calculate interpolation coefficients
-            float a = oneMinusGx * oneMinusGy;
-            float b = gx * oneMinusGy;
-            float c = oneMinusGx * gy;
-            float d = gx * gy;
+            // Retrieve pixel values from the four surrounding corners
+            Q00 = inputArray[yIdx * width + xIdx];
+            Qs0 = inputArray[yIdx * width + xNextIdx];
+            Q0s = inputArray[yNextIdx * width + xIdx];
+            Qss = inputArray[yNextIdx * width + xNextIdx];
 
             // Interpolate and store the result
-            result[yScaled * scaledW + xScaled] =((a * Q11 + b * Q21 + c * Q12 + d * Q22)+0.5f);
+            result[yScaled * scaledW + xScaled] = (uint8_t)((oneMinusGy * (oneMinusGx * Q00 + gx * Qs0) + gy * (oneMinusGx * Q0s + gx * Qss)) + 0.5f);
         }
     }
 }
