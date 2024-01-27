@@ -28,13 +28,15 @@ float* result =(float*)(result);
  uint8_t R;
  uint8_t G;
  uint8_t B;
+ //initialise the resulting grayscale value
+ float D;
     for (size_t i = 0; i < height * width*3; i+=3) {
         //load R G and B 
          R = img[i];
          G = img[i + 1];
          B = img[i + 2];
         // Lookup precomputed values from tables
-        float D = (tableA[R] + tableB[G] + tableC[B]);       
+         D = (tableA[R] + tableB[G] + tableC[B]);       
         result[i/3] = D;
     }
 }
@@ -45,7 +47,7 @@ void grayscale1(const uint8_t* img, size_t width, size_t height, float a, float 
     uint8_t R;
     uint8_t G;
     uint8_t B;
-    float D;
+    float D; //initialise the resulting grayscale value
     for (size_t i=0;i < height * width * 3;i+=3) {
         //loading the colours' variables 
         R= img[i];
@@ -70,8 +72,8 @@ void grayscale(const uint8_t* img, size_t width, size_t height, float a, float b
     __m128 Ra;
     __m128 Gb;
     __m128 Bc;
-
-    size_t i;
+    __m128 D; //initialise the resulting grayscale value
+    size_t i;//initialise index
     // Process four pixels at a time
     for (i = 0; i < (height * width * 3)-((height*width*3 )%12); i += 12) {
         // Load pixel values as floats using SIMD instruction _mm_set_ps for R, G, B channels
@@ -85,10 +87,10 @@ void grayscale(const uint8_t* img, size_t width, size_t height, float a, float b
          Bc = _mm_mul_ps(pixelB, coefC);
 
         // Sum the results to get grayscale values
-        __m128 D1 = _mm_add_ps(_mm_add_ps(Ra, Gb), Bc);
+        D = _mm_add_ps(_mm_add_ps(Ra, Gb), Bc);
       
         // Store the SIMD computed values directly into the result array
-        _mm_storeu_ps(result + i/3, D1);
+        _mm_storeu_ps(result + i/3, D);
      }
 
     // Handle any remaining pixels
