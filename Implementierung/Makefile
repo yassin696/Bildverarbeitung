@@ -4,7 +4,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra
 LDFLAGS = -lm -lpthread
--std=c11
+
 
 all: interpolate
 
