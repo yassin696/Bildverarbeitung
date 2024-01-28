@@ -274,6 +274,8 @@ void interpolation_calculation_simd( size_t width, size_t height, size_t factor,
     free(coeffTable); // Free the allocated memory for coefficients
 }
 
+
+// convert float to uint8_t (by grayscale)
 void scale1_handling(const float* tmp, uint8_t* result, size_t width, size_t height) {
     for (size_t i = 0; i < width * height; i++) {
         result[i] = (uint8_t) tmp[i]; // Cast each float value to uint8_t
@@ -283,7 +285,7 @@ void scale1_handling(const float* tmp, uint8_t* result, size_t width, size_t hei
 void interpolate_naive(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
     grayscale_naive(img, width, height, a, b, c, tmp);
     if (scale_factor == 1) {
-        scale1_handling((float*) tmp, result, width, height);
+        scale1_handling((float*) tmp, tmp, width, height);
         return;
     }
     interpolation_calculation_naive(width, height, scale_factor,(float*) tmp, result);
@@ -293,7 +295,7 @@ void interpolate_naive(const uint8_t* img, size_t width, size_t height, float a,
 void interpolate_algorithm_optimized(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
     grayscale_lookup(img, width, height, a, b, c, tmp);
     if (scale_factor == 1) {
-        scale1_handling((float*) tmp, result, width, height);
+        scale1_handling((float*) tmp, tmp, width, height);
         return;
     }
     interpolation_calculation_algorithm_optimized(width, height, scale_factor,(float*) tmp, result);
@@ -303,7 +305,7 @@ void interpolate_algorithm_optimized(const uint8_t* img, size_t width, size_t he
 void interpolate_simd(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
     grayscale_simd(img, width, height, a, b, c, tmp);
     if (scale_factor == 1) {
-        scale1_handling((float*) tmp, result, width, height);
+        scale1_handling((float*) tmp, tmp, width, height);
         return;
     }
     interpolation_calculation_simd(width, height, scale_factor,(float*) tmp, result);
@@ -602,6 +604,7 @@ int main(int argc, char **argv){
 
     // check user inputs
     check_user_input(&a, &b, &c, &scaling, outputFileName);
+    printf("%s und %s", outputFileName, inputFileName);
 
     // read ppm
     int width; int height; int imageSize;

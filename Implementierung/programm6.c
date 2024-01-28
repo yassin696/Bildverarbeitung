@@ -612,7 +612,7 @@ int main(int argc, char **argv){
     }
         
     // allocating memories 
-    uint8_t* temp = (uint8_t*)malloc((imageSize * sizeof(float)) + (imageSize * scaling * scaling * sizeof(uint8_t)));
+    uint8_t* temp = (uint8_t*)malloc((imageSize * (sizeof(float)+sizeof(uint8_t))) + (imageSize * scaling * scaling * sizeof(uint8_t)));
     if (temp == NULL) {
         // Error by allocating memory
         perror("Error by allocating memory");
@@ -728,8 +728,12 @@ int main(int argc, char **argv){
 
 
     // Saving the result picture 
+    uint8_t* picture = temp + (imageSize * sizeof(float));
+    for (int i = 0; i < imageSize; i++) {
+        picture[i] = (uint8_t) temp[i];
+    }
     if (scaling == 1) {
-        if (write_ppm(outputFileName, width, height, scaling, temp) == 1) {
+        if (write_ppm(outputFileName, width, height, scaling, picture) == 1) {
             free(temp);
             return 1;
         }
