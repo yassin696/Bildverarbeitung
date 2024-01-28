@@ -92,7 +92,7 @@ void grayscale_simd(const uint8_t* img, size_t width, size_t height, float a, fl
         __m128 D_rounded = _mm_cvtepi32_ps(_mm_cvtps_epi32(D));
 
         // Store the SIMD computed values directly into the result array
-        _mm_storeu_ps(result + i/3, D);
+        _mm_storeu_ps(result + i/3, D_rounded);
 
      }
 
@@ -117,7 +117,6 @@ void interpolation_calculation_naive(size_t width, size_t height, size_t factor,
     float gy, oneMinusGy, gx, oneMinusGx;
     size_t yIdx, yNextIdx, xIdx, xNextIdx;
     float Q00, Qs0, Q0s, Qss;
-    float val1, val2;
 
     // Iterate over each pixel in the scaled image
     for (size_t yScaled = 0; yScaled < scaledH; yScaled++) {
@@ -218,7 +217,7 @@ void interpolation_calculation_simd( size_t width, size_t height, size_t factor,
     float* coeffTable = (float*)malloc(sizeof(float) * factor * factor * 4); 
 
     float gx,gy;//initialise intermediate values
-    size_t index,x,y,sectorBaseX,sectorBaseY,coeffIndex,resultIndex;//initlialise indexes
+    size_t index,x,y,sectorBaseX,coeffIndex,resultIndex;//initlialise indexes
     __m128 Q00,Qs0,Q0s,Qss,a,b,c,d,interpolated,coeff;//initialise intermediate values and final interpolated value
     for (size_t i = 0; i < factor; i++) {
         for (size_t j = 0; j < factor; j++) {
