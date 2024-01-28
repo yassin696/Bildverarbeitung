@@ -302,11 +302,7 @@ void interpolate_simd(const uint8_t* img, size_t width, size_t height, float a, 
 
 // standard version (best optimized version)
 void interpolate(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
-    grayscale_naive(img, width, height, a, b, c, tmp);
-    if (scale_factor == 1) {
-        return;
-    }
-    interpolation_calculation_simd(width, height, scale_factor, tmp, result);
+    interpolate_simd(img, width, height, a, b, cf, scale_factor, tmp, result);
 }
 
 
