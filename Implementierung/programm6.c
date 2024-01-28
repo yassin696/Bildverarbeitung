@@ -36,7 +36,7 @@ void gentable(float coeff, float* table) {
 }
 
 void grayscale_lookup(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
-    printf("grayscale with precomputed tables\n");
+    //printf("grayscale with precomputed tables\n");
 
     // Generate tables for coefficients
     float tableA[256];
@@ -63,7 +63,7 @@ void grayscale_lookup(const uint8_t* img, size_t width, size_t height, float a, 
 
 // simd grayscale
 void grayscale_simd(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
-    float* result =(float*)(tmp);
+    float* result =(float*)(result);
     // Prepare SIMD constants for coefficients
     __m128 coefA = _mm_set1_ps(a);
     __m128 coefB = _mm_set1_ps(b);
@@ -76,8 +76,10 @@ void grayscale_simd(const uint8_t* img, size_t width, size_t height, float a, fl
     __m128 Ra;
     __m128 Gb;
     __m128 Bc;
+    __m128 D; //initialise the resulting grayscale value
+    size_t i;//initialise index
     // Process four pixels at a time
-    for (size_t i = 0; i < (height * width * 3)-((height*width*3 )%12); i += 12) {
+    for (i = 0; i < (height * width * 3)-((height*width*3 )%12); i += 12) {
         // Load pixel values as floats using SIMD instruction _mm_set_ps for R, G, B channels
          pixelR = _mm_set_ps((float)img[i+9], (float)img[i+6], (float)img[i+3], (float)img[i]);
          pixelG = _mm_set_ps((float)img[i+10], (float)img[i+7], (float)img[i+4], (float)img[i+1]);
@@ -89,14 +91,14 @@ void grayscale_simd(const uint8_t* img, size_t width, size_t height, float a, fl
          Bc = _mm_mul_ps(pixelB, coefC);
 
         // Sum the results to get grayscale values
-        __m128 D1 = _mm_add_ps(_mm_add_ps(Ra, Gb), Bc);
+        D = _mm_add_ps(_mm_add_ps(Ra, Gb), Bc);
       
         // Store the SIMD computed values directly into the result array
-        _mm_storeu_ps(result + i/3, D1);
+        _mm_storeu_ps(result + i/3, D);
      }
 
     // Handle any remaining pixels
-    for (size_t i ; i < height * width * 3; i += 3) {
+    for ( i ; i < height * width * 3; i += 3) {
      
         result[i/3] =  a *img[i] + b * img[i+1] + c * img[i+2];
     }
@@ -142,9 +144,8 @@ void interpolation_calculation_naive(size_t width, size_t height, int scale_fact
 }
 
 // algorithmically optimized interpolation calculation
-void interpolation_calculation_algorithm_optimized(size_t width, size_t height, int scale_factor, uint8_t* tmp, uint8_t* result) {
-   float* inputArray = (float*) tmp;
-   float v1_1, v1_2, v2_1, v2_2; // Variables to store pixel values for interpolation
+void interpolation_calculation_algorithm_optimized(size_t width, size_t height, int factor, uint8_t* tmp, uint8_t* result) {
+   float Q00, Qs0, Q0s, Qss; // Variables to store pixel values for interpolation
    float val1, val2; // Intermediate values for bilinear interpolation
 
    // Iterate over height
@@ -152,22 +153,22 @@ void interpolation_calculation_algorithm_optimized(size_t width, size_t height, 
        // Iterate over width
        for (size_t b = 0; b < width; b++) {
            // Get the pixel values for the current and adjacent pixels
-           v1_1 = inputArray[b + h * width]; // Current pixel 
-           v1_2 = inputArray[(b + 1) % width + h * width]; // Right neighbor
-           v2_1 = inputArray[b + ((h + 1) % height) * width]; // Bottom neighbor
-           v2_2 = inputArray[(b + 1) % width + ((h + 1) % height) * width]; // Diagonal neighbor
+           Q00 = inputArray[b + h * width]; // Current pixel 
+           Qs0 = inputArray[(b + 1) % width + h * width]; // Right neighbor
+           Q0s = inputArray[b + ((h + 1) % height) * width]; // Bottom neighbor
+           Qss = inputArray[(b + 1) % width + ((h + 1) % height) * width]; // Diagonal neighbor
 
            // Perform bilinear interpolation for each subpixel within the current sector
-           for (int f1 = 0; f1 < scale_factor; f1++) {
+           for (size_t f1 = 0; f1 < factor; f1++) {
                // Calculate intermediate values
-               val1 = ((float)(scale_factor - f1) / scale_factor) * v1_1 + ((float)f1 / scale_factor) * v1_2;
-               val2 = ((float)(scale_factor - f1) / scale_factor) * v2_1 + ((float)f1 / scale_factor) * v2_2;
+               val1 = ((float)(factor - f1) / factor) * Q00 + ((float)f1 / factor) * Qs0;
+               val2 = ((float)(factor - f1) / factor) * Q0s + ((float)f1 / factor) * Qss;
 
                // Calculate the final interpolated values and assign them to the result
-               for (int f = 0; f < scale_factor; f++) {
-                   result[(h * scale_factor + f) * width * scale_factor + (b * scale_factor + f1)] =
-                       ((float)(scale_factor - f) / scale_factor) * val1 +
-                       ((float)f / scale_factor) * val2 + 0.5f; // Adding 0.5f for rounding
+               for (size_t f = 0; f < factor; f++) {
+                   result[(h * factor + f) * width * factor + (b * factor + f1)] =
+                       ((float)(factor - f) / factor) * val1 +
+                       ((float)f / factor) * val2 + 0.5f; // Adding 0.5f for rounding
                }
            }
        }
@@ -176,89 +177,99 @@ void interpolation_calculation_algorithm_optimized(size_t width, size_t height, 
 
 // simd interpolation calculation
 void processEdge(const float* inputArray, uint8_t* result, size_t width, size_t height, int factor, size_t startWidth, size_t startHeight) {
-   float v1_1;
-   float v1_2;
-   float v2_1;
-   float v2_2;
-   float val1;
-   float val2;
-   for (size_t h = startHeight; h < height; h++) {
+   float v1_1, v1_2, v2_1, v2_2; // Variables to store pixel values for interpolation
+   float val1, val2; // Intermediate values for bilinear interpolation
+   //iterate over height
+    for (size_t h = startHeight; h < height; h++) {
+        //iterate over width
         for (size_t b = startWidth; b < width; b++) {
-             v1_1 = inputArray[b + h * width];
-             v1_2 = inputArray[(b + 1) % width + h * width];
-             v2_1 = inputArray[b + ((h + 1) % height) * width];
-             v2_2 = inputArray[(b + 1) % width + ((h + 1) % height) * width];
+            // Get the pixel values for the current and adjacent pixels
+             v1_1 = inputArray[b + h * width]; //current pixel
+             v1_2 = inputArray[(b + 1) % width + h * width]; //right neighbor
+             v2_1 = inputArray[b + ((h + 1) % height) * width]; // Bottom neighbor
+             v2_2 = inputArray[(b + 1) % width + ((h + 1) % height) * width]; // Diagonal neighbor
 
-            for (int f1 = 0; f1 < factor; f1++) {
+            // Perform bilinear interpolation for each subpixel within the current sector
+            for (size_t f1 = 0; f1 < factor; f1++) {
+                // Calculate intermediate values
                  val1 = ((float)(factor - f1) / factor) * v1_1 + ((float)f1 / factor) * v1_2;
                  val2 = ((float)(factor - f1) / factor) * v2_1 + ((float)f1 / factor) * v2_2;
-                for (int f = 0; f < factor; f++) {
+                
+                // Calculate the final interpolated values and assign them to the result
+                for (size_t f = 0; f < factor; f++) {
                     result[(h * factor + f) * width * factor + (b * factor + f1)] =
-                        ((float)(factor - f) / factor) * val1 +
-                        ((float)f / factor) * val2 + 0.5f;
+                        (((float)(factor - f) / factor) * val1 +
+                        ((float)f / factor) * val2) + 0.5f; // Adding 0.5f for rounding
                 }
             }
         }
     }
 }
 
-void interpolation_calculation_simd(size_t width, size_t height, int scale_factor, uint8_t* tmp, uint8_t* result) {
+void interpolation_calculation_simd(size_t width, size_t height, int factor, uint8_t* tmp, uint8_t* result) {
     float* inputArray = (float*) tmp;
-    int scaledWidth = width * scale_factor;
-    float invFactor = 1.0f / scale_factor;
-   
-    float* coeffTable = (float*)malloc(sizeof(float) * scale_factor * scale_factor * 4); // For a, b, c, d
-    for (int i = 0; i < scale_factor; i++) {
-        for (int j = 0; j < scale_factor; j++) {
-            float gx = j * invFactor;
-            float gy = i * invFactor;
-            int index = (i * scale_factor + j) * 4;
-            coeffTable[index] = (1 - gx) * (1 - gy);     // a
-            coeffTable[index + 1] = gx * (1 - gy);       // b
-            coeffTable[index + 2] = (1 - gx) * gy;       // c
-            coeffTable[index + 3] = gx * gy;             // d
+    size_t scaledWidth = width * factor;//calculate new width
+    float invFactor = 1.0f / factor;  // Inverse of scaling factor for coefficient calculation
+
+    // Allocate memory for precomputed interpolation coefficients a b c d
+    float* coeffTable = (float*)malloc(sizeof(float) * factor * factor * 4); 
+
+    float gx,gy;//initialise intermediate values
+    size_t index,x,y,sectorBaseX,sectorBaseY,coeffIndex,resultIndex;//initlialise indexes
+    __m128 Q00,Qs0,Q0s,Qss,a,b,c,d,interpolated,coeff;//initialise intermediate values and final interpolated value
+    for (size_t i = 0; i < factor; i++) {
+        for (size_t j = 0; j < factor; j++) {
+             gx = j * invFactor;
+             gy = i * invFactor;
+             index = (i * factor + j) * 4;
+            // Precompute bilinear interpolation coefficients for each sub-pixel position
+            coeffTable[index] = (1 - gx) * (1 - gy);     // Coefficient a
+            coeffTable[index + 1] = gx * (1 - gy);       // Coefficient b
+            coeffTable[index + 2] = (1 - gx) * gy;       // Coefficient c
+            coeffTable[index + 3] = gx * gy;             // Coefficient d
         }
     }
 
-    for (int y = 0; y < height-1 ; y++) {
-        //add if condition for y=height
+    //  SIMD processing loop over the image
+    for (y = 0; y < height - 1; y++) {
+        for ( x = 0; x < (width - 1)-((width-1)%4); x += 4) { 
+            // Load pixel values for Q00, Q0s, Qs0, Qss using SIMD
+             Q00 = _mm_loadu_ps(&inputArray[y * width + x]);
+             Q0s = _mm_loadu_ps(&inputArray[(y + 1) * width + x]);
+             Qs0 = _mm_loadu_ps(&inputArray[y * width + x + 1]);
+             Qss = _mm_loadu_ps(&inputArray[(y + 1) * width + x + 1]);
 
-        for (int x = 0; x < width-1 ; x += 4) { 
-            //add if condition for x=width
-            // ... [loading vectors and computing interpolation] ...
-            // Load vectors for Q11, Q12, Q21, and Q22
-            // Assumption: inputArray has enough padding or checks to avoid out-of-bounds access
-            
-            __m128 Q11 = _mm_loadu_ps(&inputArray[y * width + x]);
-            __m128 Q21 = _mm_loadu_ps(&inputArray[(y + 1) * width + x]);
-            __m128 Q12 = _mm_loadu_ps(&inputArray[y * width + x + 1]);
-            __m128 Q22 = _mm_loadu_ps(&inputArray[(y + 1) * width + x + 1]);
+            // Iterate over each sub-pixel position within the pixel
+            for (size_t i = 0; i < factor; i++) {
+                for (size_t j = 0; j < factor; j++) {
+                     coeffIndex = (i * factor + j) * 4;
+                     coeff = _mm_loadu_ps(&coeffTable[coeffIndex]);
 
-            for (int i = 0; i < scale_factor; i++) {
-                for (int j = 0; j < scale_factor; j++) {
-                    int coeffIndex = (i * scale_factor + j) * 4;
-                    __m128 coeff = _mm_loadu_ps(&coeffTable[coeffIndex]);
-                    __m128 a = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(0, 0, 0, 0));
-                    __m128 b = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(1, 1, 1, 1));
-                    __m128 c = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(2, 2, 2, 2));
-                    __m128 d = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(3, 3, 3, 3));
+                    // Load the precomputed coefficients into SIMD 128bit registers
+                     a = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(0, 0, 0, 0));
+                     b = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(1, 1, 1, 1));
+                     c = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(2, 2, 2, 2));
+                     d = _mm_shuffle_ps(coeff, coeff, _MM_SHUFFLE(3, 3, 3, 3));
 
-                    // Perform the bilinear interpolation
-                    __m128 interpolated = _mm_add_ps(_mm_add_ps(_mm_mul_ps(a, Q11), _mm_mul_ps(b, Q12)), _mm_add_ps(_mm_mul_ps(c, Q21), _mm_mul_ps(d, Q22)));
+                    // Perform bilinear interpolation using SIMD
+                     interpolated = _mm_add_ps(_mm_add_ps(_mm_mul_ps(a, Q00), _mm_mul_ps(b, Qs0)), _mm_add_ps(_mm_mul_ps(c, Q0s), _mm_mul_ps(d, Qss)));
 
-                    for (int k = 0; k < 4; k++) {
-                        int sectorBaseX = (x + k) * scale_factor; // Base X position for each sector
-                        int resultIndex = (y * scale_factor + i) * scaledWidth + sectorBaseX + j;
-                        result[resultIndex] = (interpolated[k]+(float)(0.5));
+                    // Store the interpolated results into the result buffer
+                    for (size_t k = 0; k < 4; k++) {
+                         sectorBaseX = (x + k) * factor;
+                         resultIndex = (y * factor + i) * scaledWidth + sectorBaseX + j;
+                        result[resultIndex] = (interpolated[k] + 0.5f); // Convert to uint8_t with rounding
                     }
                 }
             }
         }
     }
-    //void processEdge(const float* inputArray, uint8_t* result, size_t width, size_t height, int factor, size_t startWidth, size_t startHeight) {
 
-    processEdge(inputArray, result, width, height, scale_factor, width - 1, 0);
-    processEdge(inputArray, result, width, height, scale_factor, 0, height-1);
+    // Process the edge cases by calling 
+    processEdge(inputArray, result, width, height, factor,(width - 1)-((width-1)%4), 0); // Rightmost column
+    processEdge(inputArray, result, width, height, factor, 0, height-1); // Bottom row
+
+    free(coeffTable); // Free the allocated memory for coefficients
 }
 
 
