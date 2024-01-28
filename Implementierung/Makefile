@@ -8,7 +8,7 @@ LDFLAGS = -lm -lpthread
 
 all: interpolate
 
-interpolate: programm6.c
+interpolate: finalfile.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
 
 clean:
