@@ -381,7 +381,7 @@ char* check_output(char* outputFileName) {
         filename[length+3] = 'm';
         filename[length+4] = '\0';
         outputFileName = filename;
-        return outputFileName;
+        return filename;
         
     }
     return outputFileName;
@@ -471,7 +471,7 @@ uint8_t* read_ppm(char* inputFileName, int* width, int* height, int* imageSize) 
         perror("Error: Wrong file format. A PPM-Picutre is expected. For more information please use the option -h | --help");
         return NULL;
     }
-    printf("Inputfile: %s\n", inputFileName);
+    //printf("Inputfile: %s\n", inputFileName);
        
     // read the ppm-header
     FILE* inputFile = fopen(inputFileName, "rb");
