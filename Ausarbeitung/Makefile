@@ -1,7 +1,16 @@
+CC=gcc
+CFLAGS=-Wall -Wextra -std=c11 -msse4.1 -O3
+LDFLAGS=-lm -pthread
 
-.PHONY: all Ausarbeitung.pdf clean
-all: Ausarbeitung.pdf
-Ausarbeitung.pdf:
-	TEXINPUTS=:. latexmk -pdf -silent Ausarbeitung.tex
+TARGET=interpolate
+OBJ=finalfile.o
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET) $(LDFLAGS)
+
 clean:
-	rm -f *.aux *.bbl *.blg *.fls *.fdb_latexmk *.log *.pdf *~ Ausarbeitung.out
+	rm -f $(TARGET) $(OBJ)
