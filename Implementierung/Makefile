@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -std=c11 -msse4.1-O3
+CFLAGS=-Wall -Wextra -std=c11 -msse4.1 -O3
 LDFLAGS=-lm -pthread
 
 TARGET=interpolate
