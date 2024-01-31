@@ -1,17 +1,16 @@
+CC=gcc
+CFLAGS=-Wall -Wextra -std=c11 -msse4.1-O3
+LDFLAGS=-lm -pthread
 
-.PHONY: all clean run
+TARGET=interpolate
+OBJ=finalfile.o
 
-CC = gcc
-CFLAGS = -Wall -Wextra
-LDFLAGS = -lm -lpthread
+.PHONY: all clean
 
+all: $(TARGET)
 
-all: interpolate
-
-interpolate: finalfile.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET) $(LDFLAGS)
 
 clean:
-	rm -f interpolate
-
-
+	rm -f $(TARGET) $(OBJ)
