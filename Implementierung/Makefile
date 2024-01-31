@@ -1,16 +1,18 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -std=c11 -msse4.1 -O3
 LDFLAGS=-lm -pthread
-
 TARGET=interpolate
 OBJ=finalfile.o
 
 .PHONY: all clean
 
-all: $(TARGET)
+all:$(TARGET)
 
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET) $(LDFLAGS)
+
+$(OBJ): finalfile.c
+	$(CC) $(CFLAGS) -c finalfile.c -o $(OBJ)
 
 clean:
 	rm -f $(TARGET) $(OBJ)
