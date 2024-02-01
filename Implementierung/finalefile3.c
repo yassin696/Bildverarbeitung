@@ -575,7 +575,33 @@ int write_ppm(char* outputFileName, int width, int height, size_t scaling, uint8
 
 // Description of all options of the program and usage examples are displayed
 void print_usage() {
+    printf("Usage: interpolate [options] [target] ...\n");
+    printf("       default usage: ./interpolate input.pgm\n");
+    printf("       using specified implementation: ./interpolate -V 1 input.pgm\n");
+    printf("       measuaring runtime: ./interpolate -B 10 input.pgm\n");
+    printf("       specify outputfile: ./interpolate -o result.pgm input.pgm\n");
+    printf("       using costumized coefficients: ./interpolate --coeffs 0.2,0.5,0.3 input.pgm\n");
+    printf("       set a scale factor: ./interpolate -f 3 input.pgm\n");
+    printf("       display all options with examples: ./interpolate --help\n");
 
+    printf("Options: \n");
+    printf("    -V<Number> :\n");
+    printf("                The implementation, that will be used.\n");
+    printf("                -V 0 will use the standard implementation (simd implementation), -V 1 the naive implementation, \n");
+    printf("                -V 2 the algorithmically optimized implementation and -V 3 the SIMD implementation. \n");
+    printf("                If this output is not called, the standard implementation will also be called.\n");
+    printf("    -B<Number> :\n");
+    printf("                If this option is called, the duration for the specified implementation will be measured. \n")
+    printf("                This optional argument indicates the number of the repetitions of the function calling.\n");
+    printf("    -o<Filename> :\n");
+    printf("                  Output filename If this option is not called, the default value 'output.pgm' will be used.\n");
+    printf("    --coeffs<FP Number>,<FP Number>,<FP Number> :\n");
+    printf("                                                 The coefficients a, b and c for the grayscale. \n");
+    printf("                                                 If this option is not called, the default value 0.299, 0.587 und 0.114 will be used.\n");
+    printf("    -f<Number> :\n");
+    printf("                Scaling factor. If this option is not called, the default value 2 will be used.\n");
+    printf("    -h|--help :\n");
+    printf("                A description of all options of the program with usage examples will be displayed.\n");
 }
 
 // main - framework programm
