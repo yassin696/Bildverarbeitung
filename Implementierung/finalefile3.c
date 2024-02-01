@@ -106,7 +106,7 @@ void grayscale_simd(const uint8_t* img, size_t width, size_t height, float a, fl
 
 // naive interpolation calculation 
 void interpolation_calculation_naive(size_t width, size_t height, size_t factor, uint8_t* tmp, uint8_t* result) {
-    (float*) inputArray = (float*) tmp;
+    float* inputArray = (float*) tmp;
     // Calculate scaled width and height
     size_t scaledW = width * factor;  
     size_t scaledH = height * factor; 
@@ -148,7 +148,7 @@ void interpolation_calculation_naive(size_t width, size_t height, size_t factor,
 
 // algorithmically optimized interpolation calculation
 void interpolation_calculation_algorithm_optimized(size_t width, size_t height, size_t factor, uint8_t* tmp, uint8_t* result) {
-    (float*) inputArray = (float*) tmp;
+    float* inputArray = (float*) tmp;
     float Q00, Qs0, Q0s, Qss; // Variables to store pixel values for interpolation
     float val1, val2; // Intermediate values for bilinear interpolation
 
@@ -212,7 +212,7 @@ void processEdge( float* inputArray, uint8_t* result, size_t width, size_t heigh
 
 
 void interpolation_calculation_simd( size_t width, size_t height, size_t factor, uint8_t* tmp, uint8_t* result) {
-    (float*) inputArray = (float*) tmp;
+    float* inputArray = (float*) tmp;
     size_t scaledWidth = width * factor;//calculate new width
     float invFactor = 1.0f / factor;  // Inverse of scaling factor for coefficient calculation
 
@@ -399,7 +399,7 @@ char* check_output(char* outputFileName) {
 }
 
 // checking user inputs
-void check_user_input(float* a, float* b, float* c, size_t* scaling, char* outputFileName) {
+void check_user_input(float* a, float* b, float* c, int* scaling, char* outputFileName) {
     // Checking and calculating of coefficients a, b, c (a=a/(a+b+c), b=b/(a+b+c), c=c/(a+b+c))
     check_coefficients(a, b, c);
     //printf("The coefficients a, b, c: %f %f %f\n", *a, *b, *c); // test coefficients
@@ -626,7 +626,7 @@ int main(int argc, char **argv){
                 exit(0);
             default:
                 // Error because of missing entries
-                ernno = EIO;
+                errno = EIO;
                 perror("All necessary parameters are missing or wrong use of parameters. For more information please use the option -h | --help.\n");
                 exit(1);
         }
@@ -674,7 +674,7 @@ int main(int argc, char **argv){
     switch (implementation) {
         case 1:
             // naive implementation
-            printf("Naive implementation with coefficients: %f, %f, %f, scaling factor: %li, output filename: %s and inputfile: %s\n", a, b, c, scaling, outputFileName, inputFileName);
+            printf("Naive implementation with coefficients: %f, %f, %f, scaling factor: %i, output filename: %s and inputfile: %s\n", a, b, c, scaling, outputFileName, inputFileName);
             if (benchmark == 1) {
                 if (repetitions < 1) { repetitions = 1; }  // repetition can not be smaller than 1
                 // measuaring duration
@@ -698,7 +698,7 @@ int main(int argc, char **argv){
             break;
         case 2:
             // algorithmically optimized
-            printf("Algorithmically optimized implementation with coefficients: %f, %f, %f, scaling factor: %li, output filename: %s and inputfile: %s\n", a, b, c, scaling, outputFileName, inputFileName);
+            printf("Algorithmically optimized implementation with coefficients: %f, %f, %f, scaling factor: %i, output filename: %s and inputfile: %s\n", a, b, c, scaling, outputFileName, inputFileName);
             if (benchmark == 1) {
                 if (repetitions < 1) { repetitions = 1; }  // repetition can not be smaller than 1
                 // measuaring duration
@@ -722,7 +722,7 @@ int main(int argc, char **argv){
             break;
         case 3:
             // simd implementation
-            printf("SIMD implementation with coefficients: %f, %f, %f, scaling factor: %li, output filename: %s and inputfile: %s\n", a, b, c, scaling, outputFileName, inputFileName);
+            printf("SIMD implementation with coefficients: %f, %f, %f, scaling factor: %i, output filename: %s and inputfile: %s\n", a, b, c, scaling, outputFileName, inputFileName);
             if (benchmark == 1) {
                 if (repetitions < 1) { repetitions = 1; }  // repetition can not be smaller than 1
                 // measuaring duration
@@ -746,7 +746,7 @@ int main(int argc, char **argv){
             break;
         default:
             // standard implementation
-            printf("Standard implementation with coefficients: %f, %f, %f, scaling factor: %li, output filename: %s and inputfile: %s\n", a, b, c, scaling, outputFileName, inputFileName);
+            printf("Standard implementation with coefficients: %f, %f, %f, scaling factor: %i, output filename: %s and inputfile: %s\n", a, b, c, scaling, outputFileName, inputFileName);
             if (benchmark == 1) {
                 if (repetitions < 1) { repetitions = 1; }  // repetition can not be smaller than 1
                 // measuaring duration
