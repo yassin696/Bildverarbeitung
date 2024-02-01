@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -std=c11 -msse4.1 -O3
-LDFLAGS=-lm -pthread
+LDFLAGS=-lm 
 TARGET=interpolate
 OBJ=finalfile.o
 
@@ -12,7 +12,7 @@ $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET) $(LDFLAGS)
 
 $(OBJ): finalfile.c
-	$(CC) $(CFLAGS) -c finalfile.c -o $(OBJ)
+	$(CC) $(CFLAGS) -c finalefile3.c -o $(OBJ)
 
 clean:
 	rm -f $(TARGET) $(OBJ)

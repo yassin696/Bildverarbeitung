@@ -17,7 +17,7 @@ void grayscale_naive(const uint8_t* img, size_t width, size_t height, float a, f
     uint8_t R;
     uint8_t G;
     uint8_t B;
-    for (size_t i=0;i < height * width * 3;i+=3) {
+    for (size_t i = 0; i < height * width * 3; i+=3) {
         //loading the colours' variables 
         R= img[i];
         G= img[i+1];
@@ -43,7 +43,7 @@ void grayscale_lookup(const uint8_t* img, size_t width, size_t height, float a, 
     gentable(a, tableA);
     gentable(b, tableB);
     gentable(c, tableC);
-    float* result =(float*)(tmp);
+    float* result = (float*)(tmp);
     //initialise the colour values which are also indexes to the prelookup tables
      uint8_t R;
      uint8_t G;
@@ -61,7 +61,7 @@ void grayscale_lookup(const uint8_t* img, size_t width, size_t height, float a, 
 
 // simd grayscale
 void grayscale_simd(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* tmp) {
-    float* result =(float*)(tmp);
+    float* result = (float*)(tmp);
     // Prepare SIMD constants for coefficients
     __m128 coefA = _mm_set1_ps(a);
     __m128 coefB = _mm_set1_ps(b);
@@ -88,16 +88,16 @@ void grayscale_simd(const uint8_t* img, size_t width, size_t height, float a, fl
          Bc = _mm_mul_ps(pixelB, coefC);
 
         // Sum the results to get grayscale values
-__m128 D = _mm_add_ps(_mm_add_ps(Ra, Gb), Bc);
-__m128 rounding =_mm_set1_ps(0.5f);
-  __m128 D1 = _mm_add_ps(D, rounding);
+        __m128 D = _mm_add_ps(_mm_add_ps(Ra, Gb), Bc);
+        __m128 rounding =_mm_set1_ps(0.5f);
+        __m128 D1 = _mm_add_ps(D, rounding);
         // Round the floating-point values to the nearest integer
-__m128 D_rounded = _mm_floor_ps(D1);
-_mm_storeu_ps(result + i/3, D_rounded);
+        __m128 D_rounded = _mm_floor_ps(D1);
+        _mm_storeu_ps(result + i/3, D_rounded);
      }
 
     // Handle any remaining pixels
-    for (  ; i < height * width * 3; i += 3) {
+    for (; i < height * width * 3; i += 3) {
      
         result[i/3] =round(  a *img[i] + b * img[i+1] + c * img[i+2]);
     }
@@ -105,7 +105,8 @@ _mm_storeu_ps(result + i/3, D_rounded);
 
 
 // naive interpolation calculation 
-void interpolation_calculation_naive(size_t width, size_t height, size_t factor, float* inputArray, uint8_t* result) {
+void interpolation_calculation_naive(size_t width, size_t height, size_t factor, uint8_t* tmp, uint8_t* result) {
+    (float*) inputArray = (float*) tmp;
     // Calculate scaled width and height
     size_t scaledW = width * factor;  
     size_t scaledH = height * factor; 
@@ -146,35 +147,36 @@ void interpolation_calculation_naive(size_t width, size_t height, size_t factor,
 }
 
 // algorithmically optimized interpolation calculation
-void interpolation_calculation_algorithm_optimized(size_t width, size_t height, size_t factor,float* inputArray, uint8_t* result) {
-   float Q00, Qs0, Q0s, Qss; // Variables to store pixel values for interpolation
-   float val1, val2; // Intermediate values for bilinear interpolation
+void interpolation_calculation_algorithm_optimized(size_t width, size_t height, size_t factor, uint8_t* tmp, uint8_t* result) {
+    (float*) inputArray = (float*) tmp;
+    float Q00, Qs0, Q0s, Qss; // Variables to store pixel values for interpolation
+    float val1, val2; // Intermediate values for bilinear interpolation
 
-   // Iterate over height
-   for (size_t h = 0; h < height; h++) {
-       // Iterate over width
-       for (size_t b = 0; b < width; b++) {
-           // Get the pixel values for the current and adjacent pixels
-           Q00 = inputArray[b + h * width]; // Current pixel 
-           Qs0 = inputArray[(b + 1) % width + h * width]; // Right neighbor
-           Q0s = inputArray[b + ((h + 1) % height) * width]; // Bottom neighbor
-           Qss = inputArray[(b + 1) % width + ((h + 1) % height) * width]; // Diagonal neighbor
+    // Iterate over height
+    for (size_t h = 0; h < height; h++) {
+        // Iterate over width
+        for (size_t b = 0; b < width; b++) {
+            // Get the pixel values for the current and adjacent pixels
+            Q00 = inputArray[b + h * width]; // Current pixel 
+            Qs0 = inputArray[(b + 1) % width + h * width]; // Right neighbor
+            Q0s = inputArray[b + ((h + 1) % height) * width]; // Bottom neighbor
+            Qss = inputArray[(b + 1) % width + ((h + 1) % height) * width]; // Diagonal neighbor
 
-           // Perform bilinear interpolation for each subpixel within the current sector
-           for (size_t f1 = 0; f1 < factor; f1++) {
-               // Calculate intermediate values
-               val1 = ((float)(factor - f1) / factor) * Q00 + ((float)f1 / factor) * Qs0;
-               val2 = ((float)(factor - f1) / factor) * Q0s + ((float)f1 / factor) * Qss;
+            // Perform bilinear interpolation for each subpixel within the current sector
+            for (size_t f1 = 0; f1 < factor; f1++) {
+                // Calculate intermediate values
+                val1 = ((float)(factor - f1) / factor) * Q00 + ((float)f1 / factor) * Qs0;
+                val2 = ((float)(factor - f1) / factor) * Q0s + ((float)f1 / factor) * Qss;
 
-               // Calculate the final interpolated values and assign them to the result
-               for (size_t f = 0; f < factor; f++) {
-                   result[(h * factor + f) * width * factor + (b * factor + f1)] =
-                       ((float)(factor - f) / factor) * val1 +
-                       ((float)f / factor) * val2 + 0.5f; // Adding 0.5f for rounding
-               }
-           }
-       }
-   }
+                // Calculate the final interpolated values and assign them to the result
+                for (size_t f = 0; f < factor; f++) {
+                    result[(h * factor + f) * width * factor + (b * factor + f1)] =
+                        ((float)(factor - f) / factor) * val1 +
+                        ((float)f / factor) * val2 + 0.5f; // Adding 0.5f for rounding
+                }
+            }
+        }
+    }
 }
 
 // simd interpolation calculation
@@ -209,7 +211,8 @@ void processEdge( float* inputArray, uint8_t* result, size_t width, size_t heigh
 }
 
 
-void interpolation_calculation_simd( size_t width, size_t height, size_t factor,float* inputArray, uint8_t* result) {
+void interpolation_calculation_simd( size_t width, size_t height, size_t factor, uint8_t* tmp, uint8_t* result) {
+    (float*) inputArray = (float*) tmp;
     size_t scaledWidth = width * factor;//calculate new width
     float invFactor = 1.0f / factor;  // Inverse of scaling factor for coefficient calculation
 
@@ -281,6 +284,7 @@ void scale1_handling(const float* tmp, uint8_t* result, size_t width, size_t hei
         result[i] = (uint8_t) tmp[i]; // Cast each float value to uint8_t
     }
 }
+
 // naive interpolate
 void interpolate_naive(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
     grayscale_naive(img, width, height, a, b, c, tmp);
@@ -288,7 +292,7 @@ void interpolate_naive(const uint8_t* img, size_t width, size_t height, float a,
         scale1_handling((float*) tmp, tmp, width, height);
         return;
     }
-    interpolation_calculation_naive(width, height, scale_factor,(float*) tmp, result);
+    interpolation_calculation_naive(width, height, scale_factor, tmp, result);
 }
 
 // algorithmically optimized interpolate
@@ -298,7 +302,7 @@ void interpolate_algorithm_optimized(const uint8_t* img, size_t width, size_t he
         scale1_handling((float*) tmp, tmp, width, height);
         return;
     }
-    interpolation_calculation_algorithm_optimized(width, height, scale_factor,(float*) tmp, result);
+    interpolation_calculation_algorithm_optimized(width, height, scale_factor, tmp, result);
 }
 
 // simd interpolate
@@ -309,7 +313,12 @@ void interpolate_simd(const uint8_t* img, size_t width, size_t height, float a, 
         scale1_handling((float*) tmp, tmp, width, height);
         return;
     }
-    interpolation_calculation_simd(width, height, scale_factor,(float*) tmp, result);
+    interpolation_calculation_simd(width, height, scale_factor, tmp, result);
+}
+
+// interpolate (standardversion) (the best interpolation is interpolate_simd)
+void interpolate(const uint8_t* img, size_t width, size_t height, float a, float b, float c, size_t scale_factor, uint8_t* tmp, uint8_t* result) {
+    interpolate_simd(img, width, height, a, b, c, scale_factor, tmp, result);
 }
 
 // framework
@@ -331,7 +340,7 @@ void check_coefficients(float* a, float* b, float* c) {
 }
 
 // checking scaling
-void check_scaling(size_t* scaling) {
+void check_scaling(int* scaling) {
     if (*scaling < 1) {
         printf("The scale factor is smaller than 1, so the default value 2 will be used.\n");
         *scaling = 2;
@@ -408,19 +417,19 @@ void check_user_input(float* a, float* b, float* c, size_t* scaling, char* outpu
 void skip_comment(FILE *inputFile) {
     // skip possible comments between the values that need to be read for the header
     int ch;
-    int itemsRead=fscanf(inputFile, " "); // skip withespace
-    if(itemsRead==EOF){
+    int itemsRead = fscanf(inputFile, " "); // skip withespace
+    if(itemsRead == EOF){
         errno = EINVAL;
-        perror("error by skipping whitespace");
+        perror("Error by skipping whitespace");
         fclose(inputFile);
         return ;
     }
     while ((ch = fgetc(inputFile)) == '#') { // comment begins
       while ((ch = fgetc(inputFile)) != '\n'); // skip comment 
-      itemsRead=fscanf(inputFile, " "); // skip withespace
-      if(itemsRead!=1){
+      itemsRead = fscanf(inputFile, " "); // skip withespace
+      if(itemsRead != 1){
         errno = EINVAL;
-        perror("error by skipping whitespace");
+        perror("Error by skipping whitespace");
         fclose(inputFile);
         return ;
     }
@@ -440,10 +449,10 @@ int read_ppm_header(FILE* inputFile, int* width, int* height, int* maxColorValue
     }
     skip_comment(inputFile);
     int itemsRead ;
-    itemsRead =fscanf(inputFile, "%d", width);
-    if(itemsRead!=1){
+    itemsRead = fscanf(inputFile, "%d", width);
+    if(itemsRead != 1){
         errno = EINVAL;
-        perror("wrong width format");
+        perror("Invalid width Format. For more information please use the option -h | --help");
         fclose(inputFile);
         return 1;
     }
@@ -455,10 +464,10 @@ int read_ppm_header(FILE* inputFile, int* width, int* height, int* maxColorValue
         return 1;
     }
     skip_comment(inputFile);
-    itemsRead=fscanf(inputFile, "%d", height);
+    itemsRead = fscanf(inputFile, "%d", height);
     if(itemsRead!=1){
         errno = EINVAL;
-        perror("wrong height format");
+        perror("Invalid height Format. For more information please use the option -h | --help");
         fclose(inputFile);
         return 1;
     }
@@ -470,27 +479,20 @@ int read_ppm_header(FILE* inputFile, int* width, int* height, int* maxColorValue
         return 1;
     }
     skip_comment(inputFile);
-    itemsRead=fscanf(inputFile, "%d", maxColorValue); 
-    if(itemsRead!=1){
+    itemsRead = fscanf(inputFile, "%d", maxColorValue); 
+    if(itemsRead !=1 ){
         errno = EINVAL;
-        perror("wrong maxColorValue format");
+        perror("Invalid maxColorValue Format. For more information please use the option -h | --help");
         fclose(inputFile);
         return 1;
     }
-    if (*(maxColorValue) > 255 || *(maxColorValue) < 0) {
+    if (*(maxColorValue) > 255 || *(maxColorValue) < 128) {
         // Error because wrong maxColorValue
         errno = EINVAL;
         perror("Invalue value for max color. A value between 0 and 255 is expected (the picture should be 24bpp). For more information please use the option -h | --help");
         fclose(inputFile);
         return 1;
     }
-    //if (*(maxColorValue) <= 0) {
-    //    // Error because wrong maxColorValue
-    //    errno = EINVAL;
-    //    perror("Invalid value for max color. Max color must be greater than 0. For more information please use the option -h | --help");
-    //    fclose(inputFile);
-    //    return 1;
-    //}
     //printf("Width, height, maxColorValue: %i, %i, %i\n", *(width), *(height), *(maxColorValue));
     return 0;
 }
@@ -529,19 +531,18 @@ uint8_t* read_ppm(char* inputFileName, int* width, int* height, int* imageSize) 
         return NULL;
     }
     fgetc(inputFile); // new line character after end of the header
-    int itemsRead=fread(pixels, sizeof(uint8_t), *(imageSize)*3, inputFile);
+    int itemsRead = fread(pixels, sizeof(uint8_t), *(imageSize)*3, inputFile);
     if (itemsRead < *(imageSize)*3) {
-    if (feof(inputFile)) {
-        // End of file was reached before reading the expected amount of data.
-        fprintf(stderr, "End of file reached prematurely.\n");
-        return NULL;
-    } else if (ferror(inputFile)) {
-        // An error occurred during reading.
-        perror("Error reading input file");
-        return NULL;
-    }
-   
-}
+        if (feof(inputFile)) {
+            // End of file was reached before reading the expected amount of data.
+            perror("Error reading input file");
+            return NULL;
+        } else if (ferror(inputFile)) {
+            // An error occurred during reading.
+            perror("Error reading input file");
+            return NULL;
+        }
+   }
     fclose(inputFile);
     //uint8_t* check_pixels = pixels;
     //for (int i = 0; i < *(imageSize)*3; i++) {
@@ -572,6 +573,10 @@ int write_ppm(char* outputFileName, int width, int height, size_t scaling, uint8
     return 0;
 }
 
+// Description of all options of the program and usage examples are displayed
+void print_usage() {
+
+}
 
 // main - framework programm
 int main(int argc, char **argv){
@@ -585,7 +590,7 @@ int main(int argc, char **argv){
     float a = 0.299; // coefficients a, b, c, if there are no valide user inputs
     float b = 0.587;
     float c = 0.114;
-    size_t scaling = 2;
+    int scaling = 2;
 
     // parse command line arguments
     static struct option long_options[] = {
@@ -593,6 +598,7 @@ int main(int argc, char **argv){
             {"help", no_argument, 0, 'h'},
             {0, 0, 0, 0}
     };
+
     while ((option = getopt_long(argc, argv, "V:B:o:f:h", long_options, NULL)) != -1) {
         switch (option) {
             case 0:
@@ -616,20 +622,12 @@ int main(int argc, char **argv){
                 break;
             case 'h':
                 // Description of all options of the program and usage examples are displayed (the programm will end after that)
-
-                // Verwendungsbeispiele fehlen !!!
-                printf("Description of all optiions of the program:\n");
-                printf("-V<Number> : The implementation, that will be used. For -V 0, the standard implementation will be used. If this option is not called, the standard implementation also will be used.\n");
-                printf("-B<Number> : If this option is called, the duration for the specified implementation will be measured. This optional argument indicates the number of the repetitions of the function calling.\n");
-                printf("<Filename> : Positional argument for the input filename. This option must be called, either it will return a error because of missing entries.\n");
-                printf("-o<Filename> : Output filename If this option is not called, the default value 'output.pgm' will be used.\n");
-                printf("--coeffs<FP Number>,<FP Number>,<FP Number> : The coefficients a, b and c for the grayscale. If this option is not called, the default value 0.299, 0.587 und 0.114 will be used.\n");
-                printf("-f<Number> : Scaling factor. If this option is not called, the default value 2 will be used.\n");
-                printf("-h|--help : A description of all options of the program with usage examples will be displayed.\n");
+                print_usage();
                 exit(0);
             default:
                 // Error because of missing entries
-                fprintf(stderr, "All necessary parameters are missing or wrong use of parameters. For more information please use the option -h | --help.\n");
+                ernno = EIO;
+                perror("All necessary parameters are missing or wrong use of parameters. For more information please use the option -h | --help.\n");
                 exit(1);
         }
     }
@@ -648,7 +646,7 @@ int main(int argc, char **argv){
 
     // check user inputs
     check_user_input(&a, &b, &c, &scaling, outputFileName);
-    printf("%s und %s", outputFileName, inputFileName);
+    //printf("%s und %s", outputFileName, inputFileName);
 
     // read ppm
     int width; int height; int imageSize;
@@ -675,7 +673,7 @@ int main(int argc, char **argv){
     // Calculation with different implementations
     switch (implementation) {
         case 1:
-            // standard implementation
+            // naive implementation
             printf("Naive implementation with coefficients: %f, %f, %f, scaling factor: %li, output filename: %s and inputfile: %s\n", a, b, c, scaling, outputFileName, inputFileName);
             if (benchmark == 1) {
                 if (repetitions < 1) { repetitions = 1; }  // repetition can not be smaller than 1
@@ -757,7 +755,7 @@ int main(int argc, char **argv){
                 clock_gettime(CLOCK_MONOTONIC, &start);
                 for (int i = 1; i < repetitions; i++) {
                     // call the functions 
-                    interpolate_simd(pixels, width, height, a, b, c, scaling, temp, result);
+                    interpolate(pixels, width, height, a, b, c, scaling, temp, result);
                 }
                 struct timespec end;
                 clock_gettime(CLOCK_MONOTONIC, &end);
@@ -768,7 +766,7 @@ int main(int argc, char **argv){
             }
             
             // grayscale and interpolation  
-            interpolate_simd(pixels, width, height, a, b, c, scaling, temp, result);
+            interpolate(pixels, width, height, a, b, c, scaling, temp, result);
             break;
     }
 
@@ -786,6 +784,5 @@ int main(int argc, char **argv){
         }
     }
     free(temp);
-
     return 0;
 }   
