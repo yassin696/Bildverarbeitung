@@ -4,6 +4,8 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage{subcaption}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% TODO: Ersetzen Sie in den folgenden Zeilen die entsprechenden -Texte-
@@ -21,31 +23,31 @@
 \maketitle
 
 \section{Einleitung}
-Im Bereich der digitalen Bildverarbeitung führt die Schnittstelle zwischen mathematischen Prinzipien und realer Anwendung zu vielen innovativen Algorithmen, die den jetzigen Stand der Technik verbessert. Dieses Projekt befasst sich mit der Bildmanipulation und spezialisiert sich insbesondere auf der Umwandlung von Farbbildern in Graustufen und eine anschließende Skalierung durch bilineare Interpolation. Dazu werden theoretische Erkenntnisse aus der Mathematik genutzt, um einen praktischen C-Algorithmus zu entwickeln.\\\\
-Jedes Farbbild besteht aus Pixeln, die durch ihre Position $(x, y)$ eindeutig identifiziert sind und durch ihren Farbvektor (R, G, B) definiert werden. Die erste Herausforderung besteht darin, diese Farbpixel in Graustufen umzuwandeln. Dabei wird ein gewichteter Durchschnitt der Einträge des Farbvektors mit geeigneten Koeffizienten a, b und c berechnet. Bei der Berechnung der Grauwerte wird Rücksicht auf die Wahrnehmung des menschlichen visuellen Systems (HVS) genommen, damit das entstandene Graustufenbild besonders ansprechend für die menschlichen Augen ist. Anschließend wird die bilineare Interpolation angewendet, um das Bild passend zu skalieren.\\\\
-Die theoretische Grundlage dieses Projekts basiert auf dem Verständnis des 24bpp PPM-Bildformats, welches als Eingabe erwartet wird, sowie auf den mathematischen Berechnungen der Graustufenkonvertierung und der bilinearen Interpolation.\\\\
-Auf der praktischen Seite erstreckt sich die Aufgabe über die Umsetzung der theoretischen Erkenntnisse in der Programmiersprache C. Die Implementierung des Algorithmus umfasst ebenso ein Rahmenprogramm, das PPM-Dateien und weitere optionale Parameter über die Kommandozeile entgegennimmt und das Ergebnis der Berechnung als ein PGM-Bild abspeichert. Durch die I/O-Funktionen des Rahmenprogramms wird eine praktische Einbindung des Resultats in weitere Projekte und das Anpassen des Algorithmus an verschiedene Szenarien ermöglicht.\\\\
+Im Bereich der digitalen Bildverarbeitung führt die Schnittstelle zwischen mathematischen Prinzipien und realer Anwendung zu vielen innovativen Algorithmen, die den jetzigen Stand der Technik verbessert. Dieses Projekt befasst sich mit der Bildmanipulation und spezialisiert sich insbesondere auf der Umwandlung von Farbbildern in Graustufen und eine anschließende Skalierung durch bilineare Interpolation. Dazu werden theoretische Erkenntnisse aus der Mathematik genutzt, um einen praktischen C-Algorithmus zu entwickeln.\\
+Jedes Farbbild besteht aus Pixeln, die durch ihre Position $(x, y)$ eindeutig identifiziert sind und durch ihren Farbvektor (R, G, B) definiert werden. Die erste Herausforderung besteht darin, diese Farbpixel in Graustufen umzuwandeln. Dabei wird ein gewichteter Durchschnitt der Einträge des Farbvektors mit geeigneten Koeffizienten $a$, $b$ und $c$ berechnet. Bei der Berechnung der Grauwerte wird Rücksicht auf die Wahrnehmung des menschlichen visuellen Systems (HVS) genommen, damit das entstandene Graustufenbild besonders ansprechend für die menschlichen Augen ist. Anschließend wird die bilineare Interpolation angewendet, um das Bild passend zu skalieren.\\\\
+Die theoretische Grundlage dieses Projekts basiert auf dem Verständnis des 24bpp PPM-Bildformats, welches als Eingabe erwartet wird, sowie auf den mathematischen Berechnungen der Graustufenkonvertierung und der bilinearen Interpolation.\\
+Auf der praktischen Seite erstreckt sich die Aufgabe über die Umsetzung der theoretischen Erkenntnisse in der Programmiersprache C. Die Implementierung des Algorithmus umfasst ebenso ein Rahmenprogramm, das PPM-Dateien und weitere optionale Parameter über die Kommandozeile entgegennimmt und das Ergebnis der Berechnung als ein PGM-Bild abspeichert. Durch die I/O-Funktionen des Rahmenprogramms wird eine praktische Einbindung des Resultats in weitere Projekte und das Anpassen des Algorithmus an verschiedene Szenarien ermöglicht.\\
 Während der Ausarbeitung des Projektes wird insbesondere der Fokus auf die Optimierung gelegt – theoretisch durch algorithmische Optimierung und praktisch durch Parallelisierung und SIMD.
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
-    \includegraphics[scale=0.8]{Ausarbeitung/assets/verlauf.png}
+    \includegraphics[scale=0.8]{assets/verlauf.png}
     \caption{Verlauf der Eingabe zur fertigen Ausgabe}
     \label{fig:verlauf}
 \end{figure}
 
 \section{Lösungsansatz}
-Das Programm muss die Nutzereingaben korrekt erkennen und bei fehlerhaften Eingaben sinnvolle Alternativwerte verwenden.
+Das Programm muss die Nutzereingaben korrekt erkennen und bei fehlerhaften Eingaben sinnvolle Alternativwerte verwenden.\\
 Die eigentliche Konvertierung wird in drei Teilsektionen aufgeteilt. Die Graustufenkonvertierung konvertiert die PPM-Eingabe zu einem PGM-Bild, wobei die dafür vorgesehene Rundung nicht vorgenommen wird, die Interpolation skaliert das Grayscaling-Resultat mit dem vom Benutzer angegebenen Faktor und gibt dieses aus.
 
 \subsection{Netpbm-Format}
 Das Netpbm-Format enthält neben ppm auch das pgm-Bildformat. Dabei wird die Ausgabe ein P5 PGM sein. Die Entscheidung für ein PGM-Bild als Ausgabedatei lässt sich damit begründen, dass PGM für Graustufenbilder optimiert ist und nur ein Drittel der Speicher verbraucht wie das gleiche Bild als PPM abzuspeichern. Dabei verwenden PGM und PPM den gleichen Header (bei PPM P6 und bei PGM P5 als magischer Nummer). Anschließend speichert ein PPM-Bild für jeden Pixel die drei Farbkanäle Rot, Grün und Blau ab. Da beim Graustufenbild für alle drei Kanäle den gleichen Wert verwendet wird, trifft PPM-Bild die Vereinfachung, für jeden Pixel nur einen Wert abzuspeichern und braucht somit viel weniger Speicher als PPM.
 
 \subsection{Rahmenprogramm}
-Im Zuge der Implementierung war es nötig, ein Rahmenprogramm für die einfache Benutzererfahrung zu erstellen. Dabei wurde besonders viel Rücksicht auf die Benutzerfreundlichkeit genommen. Bis auf das Eingabebild sind alle Parameter optional und müssen nicht gesetzt werden. Dabei wird als Eingabebild ein 24bpp P6 ppm Bild erwartet (das heißt, für jeden Farbkanal Rot, Grün und Blau darf nicht mehr als ein Byte verwendet werden, außerdem darf die Luminanz nicht gesetzt werden). Falls die Parameter nicht gesetzt oder falsch sind wie beispielsweise ein ungültiger Dateiname für Ausgabedateien, wird nach einer kurzen Warnung auf der Konsole auf Standardwerte zurückgegriffen. Bei fehlenden Parameter für das Eingabebild oder ungültiges Eingabebild wie falsches Bildformat wird das Programm mit einer Fehlermeldung abgebrochen. Die Funktion interpolate(…) speichert das Graustufenbild in tmp und das interpolierte Bild in result ab. Anschließend schreibt das Rahmenprogramm das Bild als ein P5 PGM-Bild unter den gesetzten Parameter in den Speicher.
+Im Zuge der Implementierung war es nötig, ein Rahmenprogramm für die einfache Benutzererfahrung zu erstellen. Dabei wurde besonders viel Rücksicht auf die Benutzerfreundlichkeit genommen. Bis auf das Eingabebild sind alle Parameter optional und müssen nicht gesetzt werden. Dabei wird als Eingabebild ein 24bpp P6 ppm Bild erwartet (das heißt, für jeden Farbkanal Rot, Grün und Blau darf nicht mehr als ein Byte verwendet werden, außerdem darf die Luminanz nicht gesetzt werden). Falls die Parameter nicht gesetzt oder falsch sind wie beispielsweise ein ungültiger Dateiname für Ausgabedateien, wird nach einer kurzen Warnung auf der Konsole auf Standardwerte zurückgegriffen. Bei fehlenden Parameter für das Eingabebild oder ungültiges Eingabebild wie falsches Bildformat wird das Programm mit einer Fehlermeldung terminiert. Die Funktion $interpolate($...$)$ speichert das Graustufenbild in $tmp$ und das interpolierte Bild in result ab. Anschließend schreibt das Rahmenprogramm das Bild als ein P5 PGM-Bild unter den gesetzten Parameter in den Speicher.
 
 \subsection{Graustufenkonvertierung}
-Die Graustufenkonvertierung sieht vor, das vom Benuter angegebene PPM Bild in ein PGM-Bild umzuwandeln. Ein PPM-Bild hat für jeden Pixel drei Werte gegeben (R, G, B), ein PGM-Bild nur einen,da das Bild für alle drei Kanäle die gleichen Werte verwendet. Die R,G und B Werte müssen also mit Koeffizienten (a, b und c), zu einem einzelnen Wert $D$ konvertiert werden.
+Die Graustufenkonvertierung sieht vor, das vom Benuter angegebene PPM Bild in ein PGM-Bild umzuwandeln. Ein PPM-Bild hat für jeden Pixel drei Werte gegeben (R, G, B), ein PGM-Bild nur einen, da das Bild für alle drei Kanäle die gleichen Werte verwendet. Die R, G und B Werte müssen also mit Koeffizienten (a, b und c) zu einem einzelnen Wert $D$ gewichtet werden.
  \begin{align}
     D_{neu} {=} \frac{a \cdot R + b \cdot G + c \cdot B}{a + b + c}
 \end{align}
@@ -62,27 +64,31 @@ Die Standard-Koeffizienten $a = 0.299 (\approx \frac{2}{7}), b = 0.587 (\approx 
 Die naive Konvertierung sieht vor, jeden Pixel einzeln zu berechnen und in einem Float-Array abzuspeichern. Dadurch wird mit verschiedenen Graustufenintensitäten die Helligkeitsstufen im ursprünglichen Farbbild sichergestellt, wodurch das resultierende Bild mehr Details erhält.
 
 \subsubsection{Konvertierung mit Tabellen}
-Für diesen Konvertierungsansatz werden vorberechnete Tabellen verwendet, die jedes mögliche Ergebnis der Multiplikation von 0 bis 255 (bzw. dem maximalen Farbwert) mit den entsprechenden Koeffizienten liefern. Aufgrund der Größenlimitierung durch den Farbwert könnte ihre Zuweisung lokal im Stack erfolgen. Die Idee besteht darin, dass wir die Berechnung des Zwischenmultiplikationswertes für redundante Farbkanäle vermeiden. Statt der Multiplikation werden die Werte in der Tabelle nachgeschlagen und zum endgültigen $D_{neu}$ addiert.
+Für diesen Konvertierungsansatz werden vorberechnete Tabellen verwendet, die jedes mögliche Ergebnis der Multiplikation von 0 bis 255 (bzw. dem maximalen Farbwert) mit den entsprechenden Koeffizienten enthalten. Aufgrund der Größenlimitierung durch den Farbwert könnte ihre Zuweisung lokal im Stack erfolgen. Die Idee besteht darin, dass wir die Berechnung des Zwischenmultiplikationswertes für redundante Farbkanäle zu vermeiden. Statt der Multiplikation werden die Werte in der Tabelle nachgeschlagen und zum endgültigen $D_{neu}$ addiert.
 
 \subsubsection{Konvertierung mit SIMD}
-In unserer Implementierung wird SIMD  eingesetzt, um vier Pixel gleichzeitig zu verarbeiten und so die Effizienz gegenüber einer sequenziellen Bearbeitung zu steigern.Da SIMD ausgerichtete Daten voraussetzt, werden die letzten Pixel individuell und nicht mit SIMD verarbeitet.\\
+In unserer Implementierung wird SIMD  eingesetzt, um vier Pixel gleichzeitig zu verarbeiten und so die Effizienz gegenüber einer sequenziellen Bearbeitung zu steigern. Da SIMD ausgerichtete Daten voraussetzt, werden die letzten Pixel individuell und nicht mit SIMD verarbeitet.\\
 
-\begin{algorithmic}
-\State $coefA, coefB, coefC \gets $initialisiert
-\For{$i = 1$; $i < (height \cdot width \cdot 3) - ((height \cdot width \cdot 3) mod 12)$; $i += 12$ }
-    \State pixelR $=$ \_mm\_set\_ps(img[$i$+9], img[$i$+6], img[$i$+3], img[$i$]);
-    \State pixelG $=$ \_mm\_set\_ps(img[$i$+10], img[$i$+7], img[$i$+4], img[$i$+1]);
-    \State pixelB $=$ \_mm\_set\_ps(img[$i$+11], img[$i$+8], img[$i$+5], img[$i$+2]);
-    \State
-    \State Ra $=$ \_mm\_mul\_ps(pixelR, coefA);
-    \State Gb $=$ \_mm\_mul\_ps(pixelG, coefB);
-    \State Bc $=$ \_mm\_mul\_ps(pixelB, coefC);
-    \State
-    \State D $=$ \_mm\_add\_ps(\_mm\_add\_ps(Ra, Gb), Bc);
-\EndFor
+\begin{algorithm}
+\caption{Grayscale conversion using SIMD}
+\small % Makes the font smaller
+\begin{algorithmic}[1]
+    \State $coef \gets ((a, a, a, a), (b, b, b, b), (c, c, c, c))$ \Comment{Init coeffs}
+    \State $end \gets h \cdot w \cdot 3 - (h \cdot w \cdot 3 \mod 12)$
+    \For{$i \gets 0$ \textbf{to} $end$ \textbf{step} $12$} \Comment{Aligned data}
+        \State $vecR \gets (R_{1}, R_{2}, R_{3}, R_{4})$
+        \State $vecG \gets (G_{1}, G_{3}, G_{3}, G_{4})$
+        \State $vecB \gets (B_{1}, B_{3}, B_{3}, B_{4})$
+        \State $Ra, Gb, Bc \gets vecR \cdot coef[0], vecG \cdot coef[1], vecB \cdot coef[2]$
+        \State $D \gets Ra + Gb + Bc$ \Comment{Grayscale}
+        \State $res[i/3] \gets \text{Round}(D)$ \Comment{Rounding}
+    \EndFor
+    \For{$i \gets end$ \textbf{to} $h \cdot w \cdot 3$ \textbf{step} $3$} \Comment{Remaining}
+        \State $res[i/3] \gets \text{round}(a \cdot img[i] + b \cdot img[i+1] + c \cdot img[i+2])$
+    \EndFor
 \end{algorithmic}
-Zu Beginn werden SIMD-Konstanten für die Koeffizienten initialisiert sowie Vektoren für die Farbkanäle und weitere Zwischenwerte vorbereitet, die für die endgültige Berechnung der Graustufen benötigt werden. Die Pixelwerte werden als Fließkommazahlen in die entsprechenden Farbkanalvektoren geladen. Anschließend werden die Graustufenwerte berechnet, gerundet und als Graustufenbild gespeichert.\\
-Jeder Farbkanal liest die aktuellen R,G und B Werte aus, um sie mit den Koeffizienten zu multiplizieren und auf $D$ zu addieren. Das fertige PGM-Bild kann daraufhin an die Interpolation weitergegeben werden.
+\end{algorithm}
+
 
 \subsection{Interpolation}
 Das Ziel der Interpolation ist es, eine Bildskalierung durchzuführen, also ein Bild so zu vergrößern, dass das menschliche Auge möglichst wenig Unschärfe erkennen kann. Hierfür werden einzelne Pixel mit einem Skalierungsfaktor $k$ voneinander verschoben, wodurch Löcher von $k-1$ Pixeln im neu generierten Bild entstehen, welche mit Zwischenwerten aufgefüllt werden. Zwei zuvor aneinandergrenzende Pixel mit $k = 2$, einer schwarz, der andere weiß, sollten also in einem grauen Pixel resultieren. Da die Verschiebung in der Höhe sowie Breite durchgeführt wird entsteht pro Pixel ein neues Quadrat der Größe $k \cdot k$, mit dem ursprünglichen Pixel in der oberen linken Ecke. Durch Ausweitung des Quadrats auf $(k+1) \cdot (k+1)$ erhält man
@@ -99,92 +105,106 @@ ein Quadrat, dessen Eckpunkte bekannt sind. Anhand der bekannten Pixel kann man 
 mit $(x, y)$ als Koordinaten des zu berechnenden Pixels. Diese Funktion funktioniert für fast alle Quadrate, mit Ausnahme der rechten und unteren Randpixel, da diese keine Nachbar-Pixel haben, auf die das Quadrat ausgeweitet werden kann. Um die Interpolation weiter durchzuführen müssen also sinnvolle Alternativwerte gefunden werden.
 
 \subsection{Interpolation der Randpunkte}
-Bei der Interpolation der rechten sowie unteren Randpixel fehlen jeweils zwei bis drei der vier benötigten Eckpunkte (letzteres nur in der unteren rechten Ecke). Für diese Interpolation müssen also Alternativwerte gesucht werden.
-
-\subsubsection{Unbekannte Eckpunkte als schwarze oder weiße Pixel annehmen}
-Der erste Ansatz, alle unbekannten Werte auf $0$ oder auf den maximalen Farbwert ($255$) zu setzen, würde bei einem überwiegend schwarzen oder weißen Bild zu einem ungewollten Graustufenverlauf führen. (Beispiel: Portrait mit weißem Hintergrund und schwarzen unbekannten Pixeln führt an den Rändern zu einem kleinen Schatten-Effekt)
-
-\subsubsection{Unbekannte Eckpunkte auf die benachbarten bekannten Eckpunkte setzen}
-Wenn die Werte des benachbarten Pixel übernommen werden, gleichen alle interpolierten Werte dazwischen ebenfalls diesem Wert. (Beispiel: Eine Interpolation zwischen weiß und weiß ergibt weiß) Das würde an den zwei Kanten zu langgezogenen gleichfarbigen Linien führen, in der unteren rechten Ecke zu einem komplett gleichfarbigen Quadrat. Dieses Problem wird erst bei einem höheren Faktor sichtbar.
-
-\subsubsection{Unbekannte Eckpunkte auf den ersten gegenüberliegenden Wert setzen}
-Zum Verständnis sehen wir das Bild als Zyliner an. Dadurch berühren sich zwei Kanten, als Beispiel die linke und rechte Kante, lösen also das Problem der unbekannten Eckpunkte für eine Kante auf. Im Klartext füllt man somit die unbekannten Eckpunkte mit den ersten Eckpunkten der aktuell bearbeitenden Reihe / Spalte. Die Implementierung löst die Probleme der anderen Ansätze, würde jedoch beispielsweise bei einem Verlaufsbild von schwarz nach weiß zu einer ungewollten rechten Kante führen. Die meisten Bilder, haben jedoch einen gleichfarbigen Farbverlauf von links nach rechts (wie beispielsweise der Horizont eines Portraits), der unwahrscheinliche Fall eines Verlaufsbildes kann also ausgeschlossen werden.
+Bei der Interpolation der rechten sowie unteren Randpixel fehlen jeweils zwei bis drei der vier benötigten Eckpunkte (letzteres nur in der unteren rechten Ecke). Für diese Interpolation müssen also Alternativwerte gesucht werden.\\
+Zum Verständnis sehen wir das Bild als Zylinder an. Dadurch berühren sich zwei Kanten, als Beispiel die linke und rechte Kante, und löst das Problem der unbekannten Eckpunkte für eine Kante auf. Im Klartext füllt man somit die unbekannten Eckpunkte mit den ersten Eckpunkten der aktuell bearbeitenden Reihe / Spalte. Dieser Ansatz würde jedoch beispielsweise bei einem Verlaufsbild von schwarz nach weiß zu einer ungewollten rechten Kante führen. Die meisten Bilder, haben jedoch einen gleichfarbigen Farbverlauf von links nach rechts (wie beispielsweise der Horizont eines Portraits), der unwahrscheinliche Fall eines Verlaufsbildes kann also in Kauf genommen werden.
 
 
 \subsection{Interpolationsansätze}
 
 \subsubsection{Naiver Interpolationsansatz}
-In unserem ersten Interpolationsansatz iterieren wir über jedes Pixel des skalierten Bildes. Dabei werden Zwischenwerte, die für verschiedene x-Indizes bei gleichem y-Index gleich bleiben, im Voraus berechnet. Wir ermitteln die benötigten Pixelwerte aus dem Eingabebild in Graustufen, indem wir die entsprechenden Indizes berechnen. Anschließend führen wir die Interpolationsberechnung durch, konvertieren das Ergebnis und speichern es als uint8\_t-Wert im Ausgabebild. Dieses Format entspricht dem PGM-Format unseres Ausgabebildes.
+In unserem ersten Interpolationsansatz iterieren wir über jedes Pixel des skalierten Bildes. Dabei werden Zwischenwerte, die für verschiedene x-Indizes bei gleichem y-Index gleich bleiben, im Voraus berechnet. Wir ermitteln die benötigten Pixelwerte aus dem Eingabebild in Graustufen, indem wir die entsprechenden Indizes berechnen. Anschließend führen wir die Interpolationsberechnung durch, konvertieren das Ergebnis und speichern es als $uint8\_t$-Wert im Ausgabebild. Dieses Format entspricht dem PGM-Format unseres Ausgabebildes.
 
 \subsubsection{Algorithmisch optimierter Interpolationsansatz}
-Der optimierte Interpolationsansatz bearbeitet das neue Bild in Sektoren - den Quadraten der Größe $k \cdot k$, nicht $(k+1) \cdot (k+1)$, da das in einer doppelten Berechnung der unteren und rechten Kante resultieren würde. Dabei sind immer drei der bekannten Randpunkte außerhalb des eigentlichen Quadrats, mit dem oberen linke Randpunkt als bekannter Pixel. Für jedes Quadrat werden die Eckpunkte aus dem PGM Bild ausgelesen und in Variablen abgespeichert, dass jeder neue Pixel nicht erneut auf die vier Pixel zugreifen muss. Daraufhin wird die Funktion für jeden Pixel ausgeführt - der resultierende Float wird gerundet und an korrekter Stelle im neuen Bild abgespeichert. Der uns bereits bekannte obere linke Pixel wird nicht berechnet sondern nur direkt eingesetzt. Falls der Skalierungsfaktor Eins entspricht, muss dieser Ansatz nicht ausgeführt werden beziehungsweise kann zu Beginn terminiert werden, da dadurch keine Veränderung stattfinden würde.
-
+Der optimierte Interpolationsansatz bearbeitet das neue Bild in Sektoren - also in Quadraten der Größe $k \cdot k$, statt $(k+1) \cdot (k+1)$, da das in einer doppelten Berechnung der unteren und rechten Kante resultieren würde. Dabei sind immer drei der bekannten Randpunkte außerhalb des eigentlichen Quadrates, mit dem oberen linken Randpunkt als bekannter Pixel. Für jedes Quadrat werden die Eckpunkte aus dem PGM Bild ausgelesen und in Variablen abgespeichert, dass nicht jeder neue Pixel erneut auf die vier Pixel zugreifen muss. Daraufhin wird die Funktion für jeden Pixel ausgeführt - der resultierende Float wird gerundet und an korrekter Stelle im neuen Bild abgespeichert. Der uns bereits bekannte obere linke Pixel wird nicht berechnet sondern direkt eingesetzt. Falls der Skalierungsfaktor Eins entspricht, muss dieser Ansatz nicht ausgeführt werden beziehungsweise kann zu Beginn terminiert werden, da sich das Bild nicht verändert.
 
 \subsubsection{Algorithmisch weiter optimierter Interpolationsansatz}
 Der weiter-optimierte Interpolationsansatz basiert ebenfalls auf Sektoren. Die Idee hierbei ist, dass in horizontaler Richtung folgende Funktion genutzt werden kann, um die Werte zu berechnen. In der folgenden Funktion sei $k =$ Skalierungsfaktor, $x =$ Wert im Quadrat
 \begin{align}
     Q_{x} {=} Q_{0} \cdot \frac{k-x}{k} + Q_{k} \cdot \frac{x}{k}
 \end{align}
-Dieser Ansatz wird auf die vertikale Richtung weitergeführt, wobei die entsprechenden $Q_{0}$ und $Q_{k}$ Werte berechnet werden müssen, da sie im neuen Bild bereits gerundet wurden. Die Berechnung der Werte unterscheidet sich dadurch dem zweiten Ansatz eigentlich nur in der Reihenfolge.
+Dieser Ansatz wird auf die vertikale Richtung weitergeführt, wobei die entsprechenden $Q_{0}$ und $Q_{k}$ Werte berechnet werden müssen, da sie im neuen Bild bereits gerundet wurden. Die Berechnung der Werte unterscheidet sich dadurch von dem zweiten Ansatz eigentlich nur in der Reihenfolge.
 
 \subsubsection{Interpolation mit SIMD}
-SIMD, die Abkürzung für Single Instruction Multiple Data, erlaubt durch Parallelisierung einen Befehl auf mehreren Datenströme gleichzeitig auszuführen.\\\\
-In der SIMD-Graustufenkonvertierung unserer Implementierung verarbeiten wir vier Pixel gleichzeitig, um eine effizientere Bearbeitung im Vergleich zu sequenziellen Methoden zu erreichen. Dabei werden zu Beginn SIMD-Konstanten für die Koeffizienten a, b und c initialisiert. Diese werden mit den Farbkanalwerten R, G und B multipliziert, die als Fließkommazahlen in Vektoren geladen werden. Die resultierenden Produkte werden aufsummiert, um den Graustufenwert zu erhalten. Durch die Konvertierung in gepackte 32-Bit-Ganzzahlen und zurück in Fließkommazahlen wird ein Rundungseffekt erzielt. Die berechneten Graustufenwerte werden anschließend im Ergebnisarray gespeichert. Wegen der Ausrichtungsanforderungen von SIMD werden die letzten Pixel der Bilder individuell bearbeitet.\\\\
-Der SIMD-Prozess beginnt mit der Iteration über die gesamte Höhe des Graustufenbildes, wobei über $((Breite-1)-((Breite-1)\%4))$ iteriert wird, ausgenommen der letzten Zeile und der letzten Spalte, da diese als Randpunkte betrachtet werden und nicht auf die gleiche Weise verarbeitet werden können. Wir nutzen die Tatsache aus, dass jeder Pixel für einen Sektor als $Q_{0,0}$ interpretiert wird, so laden wir vier Pixel als $Q_{0,0}$, die vier aufeinanderfolgenden Sektoren entsprechen sollen. Das Gleiche machen wir für die $Q_{s,0}$, wobei wir bei jeder Zeile jeweils bei $x=1$ beginnen. Das gleiche Konzept gilt für c und d, ausgenommen der ersten Linie. Nach der Vorbereitung unserer Vektoren für die ersten 4 Sektoren iterieren wir durch die Pixel des Sektors, laden die entsprechenden Zwischenwerte mit der Shuffle-SIMD-Methode und wenden dann unsere Formel an. In einer Schleife speichern wir dann unsere 4 Werte für jeden Sektor, nachdem wir den entsprechenden Index für jeden berechnet und unsere Rundung angewendet haben.\\\\
-Dann verarbeiten wir die Randpunkte individuell, indem wir einen nicht-SIMD-Prozess aufrufen. Am Ende wird der für die Koeffizienten allokierte Speicher freigegeben.\\\\
-Diese Implementierung nutzt die Leistungsfähigkeit von SIMD, um eine effizientere Bilddatenverarbeitung zu erreichen. Durch die parallele Verarbeitung mehrerer Datenpunkte können weniger Operationen ausgeführt werden, verglichen mit einer sequentiellen Verarbeitung. Zukünftige Optimierungen könnten eine noch genauere Anpassung an spezifischen Hardware-Eigenschaften oder eine Erweiterung der SIMD-Operationen umfassen, um eine weitere Effizienzsteigerungen zu erzielen.
-
-
+Die Idee hier ist, dass wir das eingegebene Graustufenbild durchiteriert wird und die Tatsache ausgenutzt wird, dass jeder Pixel für einen Sektor als $Q_{0,0}$ interpretiert wird. Deshalb werden vier $Q_{0,0}$-Werte, die 4 aufeinanderfolgenden Sektoren entsprechen geladen. Das Gleiche gilt für die $Q_{s,0}$, wobei jetzt jede Zeile jeweils bei $x=1$ beginnt. Das gleiche Konzept gilt für $c$ und $d$, ausgenommen der ersten Linie. Die letzte Zeile und letzte Spalte, die zu den nicht ausgerichteten Daten hinzugefügt wurden, müssen einzeln behandelt werden.
+\begin{algorithm}
+\caption{SIMD-Interpolation Implementierung}\label{alg:simd_interpolation}
+\begin{algorithmic}[1]
+\State $breiteNeu \gets breite \times faktor$
+\State $invFaktor \gets 1 / faktor$
+\State Vorbereiten der Zwischenwerte außerhalb der Schleifen
+\For {$y \gets 0$ \textbf{to} $hoehe - 2$}
+    \For {$x \gets 0$ \textbf{to} $(breite - 1) - ((breite - 1) \% 4)$}
+        \State $Q00 \gets$ Lade 4 aufeinanderfolgende Pixel
+        \State $Qs0 \gets$ Lade 4 aufeinanderfolgende Pixel startend von $x + 1$ 
+        \State $Q0s \gets$ Lade 4 Pixel von  Zeile
+        \State $Qss \gets$ Lade 4 diagonalen Pixel startend von $x + 1$ 
+        \For {$i \gets 0$ \textbf{to} $faktor - 1$}
+            \For {$j \gets 0$ \textbf{to} $faktor - 1$}
+                \State $a, b, c, d \gets$ Lade Zwischenwerte mit Shuffle
+                
+                \State $interpolated \gets Q00*a + Qs0*b + Q0s*c + Qss*d$                 
+                \State Speichere gerundet und konvertierte interpolierte Werte
+            \EndFor
+        \EndFor
+    \EndFor
+    
+\EndFor
+\State Verarbeite Randpunkte mit nicht-SIMD-Prozess
+\end{algorithmic}
+\end{algorithm}
 
 % TODO: Je nach Aufgabenstellung einen der Begriffe wählen
 \section{Genauigkeit}
 \subsection{Rechnen mit Floats}
-Im allgemeinen wird bei der Graustufenkonvertierung sowie Interpolation mit Floats gearbeitet. Floats sind auf 32 Bit begrenzt und für ihre Ungenauigkeit bei der Multiplikation bekannt. Im Falle der Koeffizienten für die Graustufenkonvertierung können die Endresultate für die Optimierung $a + b + c = 1$ meist garnicht perfekt in floats gespeichert werden. als Alternative könnte man auf doubles zurückgreifen, was aber einen Eingriff in den SIMD-Prozess voraussetzen würde.
+Im allgemeinen wird bei der Graustufenkonvertierung sowie Interpolation mit Floats gearbeitet. Floats sind auf 32 Bit begrenzt und für ihre Ungenauigkeit bei der Multiplikation bekannt. Im Falle der Koeffizienten für die Graustufenkonvertierung können die Endresultate für die Optimierung $a + b + c = 1$ meistens nicht perfekt in Floats gespeichert werden. Als Alternative könnte man auf Doubles zurückgreifen, was aber einen Eingriff in den SIMD-Prozess aufgrund größerer Datenstrukturen ineffizient machen würde.
 
 %\subsection{Graustufenkonvertierung zu Interpolation}
 %Durch die normale Konvertierung zu einem PGM-Bild und #darauffolgender Interpolation würden die PGM-Werte gerundet %weiterverarbeitet werden. Stattdessen gibt die #Graustufenkonvertierung das Bild in Floats aus, wodurch die %%Interpolation genauere Werte zur Berechnung nutzen kann.
 
 \subsection{Graustufenkonvertierung}
-Bei der Entwicklung der Methoden zur Graustufenkonvertierung war es wichtig, eine einheitliche Rundungsstrategie zu verfolgen, um Konsistenz über alle Implementierungen hinweg zu gewährleisten. Bei der Anwendung der Lookup-Tabellen und der naiven Interpolationsmethode wurde diese Funktion eingesetzt.\\
-Im Fall der SIMD-Implementierung musste aufgrund der fehlenden direkten Entsprechung einer exakten Rundungsmethode für einzelne Fließkommazahlen ein alternativen Ansatz gewählt werden. Hierbei wurde auf jeden Wert 0.5 addiert und die Fließkommazahl durch \_mm\_floor\_ps zur Abrundung verwendet. Dadurch wird gewährleistet, dass alle Konvertierungen die gleichen Resultate bei gleichen Eingaben erreichen.
+Bei der Entwicklung der Methoden zur Graustufenkonvertierung war es wichtig, eine einheitliche Rundungsstrategie zu verfolgen, um Konsistenz über alle Implementierungen hinweg zu gewährleisten. Bei der Anwendung der Lookup-Tabellen und der naiven Interpolationsmethode wurde dies beachtet.\\
+Im Fall der SIMD-Implementierung musste aufgrund der fehlenden direkten Entsprechung einer exakten Rundungsmethode für einzelne Fließkommazahlen ein alternativer Ansatz gewählt werden. Hierbei wurde auf jeden Wert $0.5$ addiert und die Fließkommazahl durch $\_mm\_floor\_ps$ abgerundet. Diese Vorgehensweise kann im Vergleich zu anderen Methoden leicht langsamer sein, sichert jedoch eine exakte Rundung und garantiert, dass alle Konvertierungen unabhängig von der Eingabe konsistente und präzise Resultate liefern. Obwohl diese Methode möglicherweise nicht die schnellste ist, wurde sie gewählt, um die Genauigkeit zu maximieren und zu gewährleisten, dass die Ergebnisse exakt den mathematischen Erwartungen entsprechen.
 
 \subsection{Interpolationsrundungen}
-Die von der Interpolation berechneten neuen Pixel sind in den meisten Fällen Werte mit Nachkommastellen (Beispiel: $k = 2$ mit $P_{0,0} = 10$, $P_{1,0} = 11$ ergibt $Q_{0,0} = 10$, $P_{1,0} = 10.5$, $P_{2,0} = 11$, $...$). Der resultierende Wert muss also gerundet werden. Im Falle eines maximalen Farbwertes von $255$ kann diese Rundung eher vernachlässigt werden, würde aber bei niedrigen maximalen Farbwerten theoretisch Probleme bereiten. Daher wurde die in der Graustufenkonvertierung erwähnte Rundung via 0.5 verwendet, um bei allen Implementationen die gleichen Werte zu erzielen, bevor die Resultate in einem uint\_8 abgespeichert werden.
+Die von der Interpolation berechneten neuen Pixel sind in den meisten Fällen Werte mit Nachkommastellen (Beispiel: $k = 2$ mit $P_{0,0} = 10$, $P_{1,0} = 11$ ergibt $Q_{0,0} = 10$, $P_{1,0} = 10.5$, $P_{2,0} = 11$, $...$). Der resultierende Wert muss also gerundet werden. Im Falle eines maximalen Farbwertes von $255$ kann diese Rundung eher vernachlässigt werden, würde aber bei niedrigen maximalen Farbwerten theoretisch Probleme bereiten. Daher wurde die in der Graustufenkonvertierung erwähnte Rundung via 0.5 verwendet, um bei allen Implementationen die gleichen Werte zu erzielen, bevor die Resultate in einem $uint\_8$ abgespeichert werden.
+
+\subsection{Genauigkeit-Test}
+Die Genauigkeit wurde über ein breites Spektrum an Bildgrößen hinweg getestet, mit einem besonderen Fokus auf den Skalierungsfaktor 2. In jedem Fall, von kleinsten Bildern bis hin zu solchen mit 16 Millionen Pixeln, waren die Resultate identisch. Dies zeigt die Zuverlässigkeit der Implementierungen und die Effektivität der Rundungsmethoden, insbesondere der strategischen Addition von $0.5$ vor der Abrundung in der SIMD-Implementierung.\\
+Die Algorithmen demonstrieren eine hohe Präzision und Konsistenz, was ihre Anwendbarkeit in der Praxis bestätigt.
+
 
 \section{Performanzanalyse}
 Um die Performanz der vorgestellten und implementierten Lösungsansätze zu vergleichen, überprüfen und beurteilen zu können wurden sie auf einem Windows 11 Laptop mit einer i5-10300H CPU (L1: 256KB, L2: 1MB, L3: 8MB) mit 24GB 2600MHz RAM verglichen. Das Programm wurde mit GCC 11.4.0 -O0 kompiliert.
 
 \subsection{Komplexität}
-In der folgenden Sektion wird auf $n =$ Anzahl der Pixel, zurückgegriffen.
+In der folgenden Sektion gilt $n =$ Anzahl der Pixel.
 
 \subsubsection{Rahmenprogramm}
-Das Rahmenprogramm besitzt eine Laufzeit von $O(n)$, da das Bild einmalig in ein Array eingelesen werden muss. Die Laufzeit der überprüfung von Argumenten kann für die Komplexitätsberechnung vernachlässigt werden.
+Das Rahmenprogramm besitzt eine Laufzeit von $O(n)$, da das Bild einmalig in ein Array eingelesen werden muss. Die Laufzeit der Überprüfung von Argumenten kann für die Komplexitätsberechnung vernachlässigt werden.
 
 \subsubsection{Grayscaling}
-Jede Grayscale-Methode ist auf $O(n)$ zurückzuführen. Auch wenn der Code beispielsweise beim Table-Lookup auf $O(1)$ werden für einen Pixel optimiert wurde oder durch SIMD mehrere Pixel gleichzeitig berechnet werden, wird diese Laufzeit trotzdem mit $n$ in der Komplexität multipliziert
+Jede Grayscale-Methode ist auf $O(n)$ zurückzuführen. Auch wenn der Code beispielsweise beim Lookup-Table auf $O(1)$ für einen Pixel optimiert wurde oder durch SIMD mehrere Pixel gleichzeitig berechnet werden, wird diese Laufzeit trotzdem mit $n$ in der Komplexität multipliziert. Durch Nachschlagen der Werte kann zwar eine Beschleunigung des Programmes erreicht werden, da dies aber nur leicht schneller als eine Multiplikation mit kleinen Zahlen ist, bleibt der Speed-Up marginal. Für ein großes $n$ kann SIMD ein SpeedUp-Faktor von $4$ erreichen.
 
 \subsubsection{Interpolation}
 Die Interpolation ist ebenfalls auf $O(n)$ zurückzuführen. (Genauer: $O(n \cdot k^{2})$ mit $k =$ Interpolationsfaktor). Man erwartet aber ein deutlich besseres Laufzeitverhalten durch Code-Optimierungen
 
 \subsection{Laufzeitverhalten}
 Die Laufzeit des Programmes jeder Implementierung steigt linear mit der Eingabegröße. Zu erwarten war ein Laufzeitverhalten von $O(n)$\\
-Wie zu erwarten sinkt die Laufzeit des Programmes durch Parallelisierung und Optimierung der naiven Implementierung.
+Wie zu erwarten sinkt die Laufzeit des Programmes durch Parallelisierung und Optimierung bezüglich der naiven Implementierung.
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
-    \includegraphics[scale=0.125]{Ausarbeitung/assets/speed.png}
-    \includegraphics[scale=0.125]{Ausarbeitung/assets/speed.png}
-    \caption{Links: Benötigte Zeit für ein Bild mit angegebenen Pixel mit Skalierungsfaktor 2, Rechts: Benötigte Zeit für ein Bild mit angegebenen Pixel mit Skalierungsfaktor 24}
+    \includegraphics[scale=0.125]{assets/speed.png}
+    \includegraphics[scale=0.125]{assets/speed2.png}
+    \caption{Links: Benötigte Zeit für ein Bild mit Skalierungsfaktor 2 anhand der Anzahl von Pixeln, Rechts: Benötigte Zeit für ein Bild von 512x512 anhand des Skalierungsfaktors}
     \label{fig:speed}
 \end{figure}
-
 \subsection{Cache}
-Aufgrund der Größe des resultierenden Bildes passt das Bild in keinen der L-Caches, was vermutlich in der Speicherung auf dem Hauptspeicher resultiert und damit die Laufzeit des Programmes beeinträchtigt.
-
+Aufgrund der Größe des resultierenden Bildes passt das Bild in keinen der L-Caches, wodurch die Speicherung vermutlich auf dem Hauptspeicher erfolgt und damit die Laufzeit des Programmes beeinträchtigt.
 
 \section{Zusammenfassung und Ausblick}
-Dieses Projekt setzt sich mit der Bildmanipulation auseinander. Dabei liegt der Fokus auf die Umwandlung von Farbbildern in Graustufen und eine anschließende Skalierung durch bilineare Interpolation. Das Programm beinhaltet neben einem naiven Ansatz zum nachvollziehen der mathematischen Berechnungen und der theoretischen Überlegungen auch verschiedene optimierte Ansätze, die je nach Kontext und Einbettung des Programms bessere Resultate liefern. Hierbei kommen algorithmische Optimierungen wie Look-up-Tables, die vorab Werte berechnen, sowie Parallelisierung und SIMD zum Einsatz, um eine maximale Leistungsfähigkeit des Codes zu gewährleisten.\\\\
-Dieses Projekt ist nicht nur theoretisch von besonderer Bedeutung, auch praktisch finden sich Graustufenkonvertierung und bilineare Interpolation viele sinnvolle Anwendungsmöglichkeiten. So wird die Graustufenkonvertierung oft in der Bild- und Videoverarbeitung verwendet, um Retro-Effekte nachzuahmen oder um Speicher zu sparen, wenn die Farbinformationen keine Rolle spielen. Des Weiteren findet die Graustufenkonvertierung auch Gebrauch im Grafikdesign und Druck, zur Konvertierung zu Schwarz-Weiß-Bildern statt. Die Integration der bilinearen Interpolation macht den Algorithmus auch bedeutsam für Videokompression und Computerspiele. So lässt sich ein Bild zuerst komprimieren und dann interpolieren, um Speicher zu sparen.\\
+Dieses Projekt setzt sich mit der Bildmanipulation auseinander. Dabei liegt der Fokus auf die Umwandlung von Farbbildern in Graustufen und eine anschließende Skalierung durch bilineare Interpolation. Das Programm beinhaltet neben einem naiven Ansatz zum Nachvollziehen der mathematischen Berechnungen und der theoretischen Überlegungen auch verschiedene optimierte Ansätze, die je nach Kontext und Einbettung des Programms bessere Resultate liefern. Hierbei kommen algorithmische Optimierungen wie Look-up-Tables, die vorab Werte berechnen, sowie Parallelisierung durch SIMD zum Einsatz, um eine maximale Leistungsfähigkeit des Codes zu gewährleisten.\\\\
+Dieses Projekt ist nicht nur theoretisch von besonderer Bedeutung, auch praktisch finden sich Graustufenkonvertierung und bilineare Interpolation viele sinnvolle Anwendungsmöglichkeiten. So wird die Graustufenkonvertierung oft in der Bild- und Videoverarbeitung verwendet, um Retro-Effekte nachzuahmen oder um Speicher zu sparen, wenn die Farbinformationen keine Rolle spielen. Die Integration der bilinearen Interpolation macht den Algorithmus auch bedeutsam für Videokompression und Computerspiele. So lässt sich ein Bild zuerst komprimieren und dann interpolieren, um Speicher zu sparen.\\
 Dieses Projekt demonstriert, wie mathematischen Erkenntnisse und technische Grundlagen innovative Bildverarbeitungstechniken hervorbringen können, die die Bildqualität und die Bildrepräsentation revolutionieren können. Insgesamt kann das Projekt als Grundlage für viele weitere Arbeiten im Bereich der Bildmanipulation dienen.
 
 % TODO: Fuegen Sie Ihre Quellen der Datei Ausarbeitung.bib hinzu
