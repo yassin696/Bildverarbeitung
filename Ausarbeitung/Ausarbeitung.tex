@@ -172,6 +172,17 @@ Die von der Interpolation berechneten neuen Pixel sind in den meisten Fällen We
 Die Genauigkeit wurde über ein breites Spektrum an Bildgrößen hinweg getestet, mit einem besonderen Fokus auf den Skalierungsfaktor 2. In jedem Fall, von kleinsten Bildern bis hin zu solchen mit 16 Millionen Pixeln, waren die Resultate identisch. Dies zeigt die Zuverlässigkeit der Implementierungen und die Effektivität der Rundungsmethoden, insbesondere der strategischen Addition von $0.5$ vor der Abrundung in der SIMD-Implementierung.\\
 Die Algorithmen demonstrieren eine hohe Präzision und Konsistenz, was ihre Anwendbarkeit in der Praxis bestätigt.
 
+\begin{tabular}[h]{cccc} %bild ist 512x512 - werte davor in tausend
+ Skalierungsfaktor & Naive vs Optimisiert & Naiv vs SIMD & Optimisiert vs SIMD \\
+ $1, 2, 3, 4$ & 0 & 0 & 0 \\
+ $6, 7, 8, 9$ & $75763$ & $51546$ & $79451$ \\
+ $10, 11$ & $112437$ & $85435$ & $137018$ \\
+ $12, 13$ & $262964$ & $189261$ & $298229$ \\
+ $14, 15, 16, 17$ & $325182$ & $229889$ & $375447$ \\
+ $18, 19$ & $438917$ & $352814$ & $519551$ \\
+ $20$ & $535449$ & $471138$ & $687737$
+\end{tabular}
+
 
 \section{Performanzanalyse}
 Um die Performanz der vorgestellten und implementierten Lösungsansätze zu vergleichen, überprüfen und beurteilen zu können wurden sie auf einem Windows 11 Laptop mit einer i5-10300H CPU (L1: 256KB, L2: 1MB, L3: 8MB) mit 24GB 2600MHz RAM verglichen. Das Programm wurde mit GCC 11.4.0 -O0 kompiliert.
