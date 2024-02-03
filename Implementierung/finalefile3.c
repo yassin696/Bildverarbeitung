@@ -591,7 +591,7 @@ void print_usage() {
     printf("                -V 2 the algorithmically optimized implementation and -V 3 the SIMD implementation. \n");
     printf("                If this output is not called, the standard implementation will also be called.\n");
     printf("    -B<Number> :\n");
-    printf("                If this option is called, the duration for the specified implementation will be measured. \n")
+    printf("                If this option is called, the duration for the specified implementation will be measured. \n");
     printf("                This optional argument indicates the number of the repetitions of the function calling.\n");
     printf("    -o<Filename> :\n");
     printf("                  Output filename If this option is not called, the default value 'output.pgm' will be used.\n");
