@@ -1,12 +1,17 @@
 % Diese Zeile bitte -nicht- aendern.
 \documentclass[course=erap]{aspdoc}
 
-\usepackage{graphicx}
-\usepackage{amsmath}
-\usepackage{algpseudocode}
 \usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath}
 \usepackage{subcaption}
-
+\usepackage{tikz}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\pgfplotsset{compat=newest}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% TODO: Ersetzen Sie in den folgenden Zeilen die entsprechenden -Texte-
 %% mit den richtigen Werten.
@@ -169,40 +174,36 @@ Im Fall der SIMD-Implementierung musste aufgrund der fehlenden direkten Entsprec
 Die von der Interpolation berechneten neuen Pixel sind in den meisten Fällen Werte mit Nachkommastellen (Beispiel: $k = 2$ mit $P_{0,0} = 10$, $P_{1,0} = 11$ ergibt $Q_{0,0} = 10$, $P_{1,0} = 10.5$, $P_{2,0} = 11$, $...$). Der resultierende Wert muss also gerundet werden. Im Falle eines maximalen Farbwertes von $255$ kann diese Rundung eher vernachlässigt werden, würde aber bei niedrigen maximalen Farbwerten theoretisch Probleme bereiten. Daher wurde die in der Graustufenkonvertierung erwähnte Rundung via 0.5 verwendet, um bei allen Implementationen die gleichen Werte zu erzielen, bevor die Resultate in einem $uint\_8$ abgespeichert werden.
 
 \subsection{Genauigkeit-Test}
+\subsubsection{bei steigenden Anzahl von Pixeln:}
 Die Genauigkeit wurde über ein breites Spektrum an Bildgrößen hinweg getestet, mit einem besonderen Fokus auf den Skalierungsfaktor 2. In jedem Fall, von kleinsten Bildern bis hin zu solchen mit 16 Millionen Pixeln, waren die Resultate identisch. Dies zeigt die Zuverlässigkeit der Implementierungen und die Effektivität der Rundungsmethoden, insbesondere der strategischen Addition von $0.5$ vor der Abrundung in der SIMD-Implementierung.\\
 Die Algorithmen demonstrieren eine hohe Präzision und Konsistenz, was ihre Anwendbarkeit in der Praxis bestätigt.\\
 
 
+\subsubsection{bei steigenden Skalierungsfaktoren:}
+
 \begin{table}[ht]
 \centering
-\begin{tabular}{|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|c|}
 \hline
-Skalierungsfaktor & Naive vs Optimized & Naive vs SIMD & Optimisiert vs SIMD \\ 
+k & \# Pixeln & v1 vs v2 & ER v1 vs v2 (\%) & v1 vs v3 & ER v1 vs v3 (\%)  \\ 
 \hline
-$1,2,3,4$ & $0$ & $0$ & $0$ \\
-$6,7,8,9$ & $75763$ & $51546$ & $79451$ \\
-$10,11$ & $112437$ & $85435$ & $137018$ \\
-$12,13$ & $262964$ & $189261$ & $298229$ \\
-$14,15,16,17$ & $325182$ & $229889$ & $375447$ \\
-$18,19$ & $438917$ & $352814$ & $519551$ \\
-$20$ & $535449$ & $471138$ & $687737$ \\
+6 & 9437184 & 75751 & 0.803 & 51477 & 0.545  \\
+10 & 26214400 & 36819 & 0.140 & 34006 & 0.130  \\
+12 & 37748736 & 150131 & 0.398 & 103552 & 0.274  \\
+14 & 51380224 & 61126 & 0.119 & 40514 & 0.079  \\
 \hline
 \end{tabular}
-\caption{Vergleiche der Genauigkeit verschiedener Ansätze bei eine4 512x512 Eingabe}
-\label{table:comparison}
+\caption{Vergleich der Implementierungen und Fehlerquote.}
+\label{tab:comparison}
 \end{table}
 
-\noindent
-Verglichen wurden die finalen Ausgaben eines $512 \cdot 512$ Bildes mit jeweils dem gleichen Faktor. Die gemessenen unterschiedlichen Werte unterscheiden sich jeweils nur um eins. Dieser Unterschied ist auf Multiplikationen mit dem höheren Faktor und den kleinen Konstanten ($\leq 1.0$) zurückzuführen, da eine Multiplikation mit einer größeren und kleineren Zahl in Ungenauigkeit resultiert.
+Es gibt bis zu einem Skalierungsfaktor von 5 keine Unterschiede in den Pixelwerten zwischen den drei Implementierungsmethoden bestehen. Ab einem Skalierungsfaktor von 6 treten geringfügige Differenzen auf, die jedoch nur eine Abweichung von 1 pro Pixel betragen. Diese minimale Diskrepanz ist vernachlässigbar und führt zu keinen sichtbaren Unterschieden im resultierenden Bild.
+
+Die Ursache für die aufgetretenen Unterschiede liegt in der Verwendung von Fließkommazahlen und den damit verbundenen Rundungen sowie in den unterschiedlichen Berechnungsschritten der Methoden. s ist wichtig zu betonen, dass diese Abweichungen zwar aus technischer Sicht vorhanden sind, sie jedoch keinen Einfluss auf die praktische Anwendung der Bildbearbeitung haben. Die visuelle Qualität der Bilder bleibt unbeeinträchtigt, was die Effektivität und Zuverlässigkeit der untersuchten Implementierungen unterstreicht. Die Ergebnisse bestätigen daher unsere theoretische Annahme, dass solche Abweichungen im Rahmen der Bildverarbeitung akzeptabel sind, insbesondere wenn sie unterhalb der Wahrnehmungsschwelle des menschlichen Auges liegen.
 
 \section{Performanzanalyse}
-Um die Performanz der vorgestellten und implementierten Lösungsansätze zu vergleichen, überprüfen und beurteilen zu können wurden sie auf einem Windows 11 Laptop mit einer i5-10300H CPU (L1: 256KB, L2: 1MB, L3: 8MB) mit 24GB 2600MHz RAM verglichen. Das Programm wurde mit GCC 11.4.0 -O0 kompiliert.
-
-\subsection{Komplexität}
+\subsection{Theorethische Teil:}
 In der folgenden Sektion gilt $n =$ Anzahl der Pixel.
-
-\subsubsection{Rahmenprogramm}
-Das Rahmenprogramm besitzt eine Laufzeit von $O(n)$, da das Bild einmalig in ein Array eingelesen werden muss. Die Laufzeit der Überprüfung von Argumenten kann für die Komplexitätsberechnung vernachlässigt werden.
 
 \subsubsection{Grayscaling}
 Jede Grayscale-Methode ist auf $O(n)$ zurückzuführen. Auch wenn der Code beispielsweise beim Lookup-Table auf $O(1)$ für einen Pixel optimiert wurde oder durch SIMD mehrere Pixel gleichzeitig berechnet werden, wird diese Laufzeit trotzdem mit $n$ in der Komplexität multipliziert. Durch Nachschlagen der Werte kann zwar eine Beschleunigung des Programmes erreicht werden, da dies aber nur leicht schneller als eine Multiplikation mit kleinen Zahlen ist, bleibt der Speed-Up marginal. Für ein großes $n$ kann SIMD ein SpeedUp-Faktor von $4$ erreichen.
@@ -210,23 +211,112 @@ Jede Grayscale-Methode ist auf $O(n)$ zurückzuführen. Auch wenn der Code beisp
 \subsubsection{Interpolation}
 Die Interpolation ist ebenfalls auf $O(n)$ zurückzuführen. (Genauer: $O(n \cdot k^{2})$ mit $k =$ Interpolationsfaktor). Man erwartet aber ein deutlich besseres Laufzeitverhalten durch Code-Optimierungen
 
+\subsection{Testumgebung und Parameter}
+Um die Performanz der vorgestellten und implementierten Lösungsansätze zu vergleichen, überprüfen und beurteilen zu können wurden sie auf einem Windows 11 Laptop mit einer i5-10300H CPU (L1: 256KB, L2: 1MB, L3: 8MB) mit 24GB 2600MHz RAM verglichen. Das Programm wurde mit GCC 11.4.0 -O3 kompiliert.
+Jeder Test wurde 10 Mal durchgeführt. Nachdem wurde ein Durschnitt von den gesamten Laufzeiten berechnet und in den folgenden Graphen dagestellt.
 \subsection{Laufzeitverhalten}
-Die Laufzeit des Programmes jeder Implementierung steigt linear mit der Eingabegröße. Zu erwarten war ein Laufzeitverhalten von $O(n)$\\
-Wie zu erwarten sinkt die Laufzeit des Programmes durch Parallelisierung und Optimierung bezüglich der naiven Implementierung.
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[scale=0.125]{assets/speed.png}
-    \includegraphics[scale=0.125]{assets/speed2.png}
-    \caption{Links: Benötigte Zeit für ein Bild mit Skalierungsfaktor 2 anhand der Anzahl von Pixeln, Rechts: Benötigte Zeit für ein Bild von 512x512 anhand des Skalierungsfaktors}
-    \label{fig:speed}
-\end{figure}
+\begin{tikzpicture}
+\begin{axis}[
+    legend style={at={(0.5,-0.2)},anchor=north, font=\small},
+    title={Implementierung},
+    xlabel={Anzahl der Pixel in Millionen},
+    ylabel={Zeit in ms},
+    xmin=0, xmax=17,
+    ymin=0, ymax=800,
+    legend pos=north west,
+    ymajorgrids=true,
+    grid style=dashed,
+]
+
+\addplot[
+    color=red,
+    mark=square,
+    ]
+    coordinates {
+    (0.1,5.5)(0.5,27.88)(1,63.66)(2,114.74)(4,227.27)(8,445.08)(16,947.94)
+    };
+    \addlegendentry{V1}
+
+\addplot[
+    color=blue,
+    mark=*,
+    ]
+    coordinates {
+    (0.1,2.12)(0.5,11.1)(1,24.92)(2,42.0)(4,85.10)(8,166.32)(16,341.10)
+    };
+    \addlegendentry{V2}
+
+\addplot[
+    color=green,
+    mark=triangle,
+    ]
+    coordinates {
+    (0.1,0.73)(0.5,3.29)(1,8.92)(2,14.94)(4,26.0)(8,62.99)(16,102.36)
+    };
+    \addlegendentry{V3}
+
+\end{axis}
+\end{tikzpicture}
+Im ersten Diagramm, das die Laufzeit bei zunehmender Pixelanzahl darstellt, zeigen die naive und die algorithmisch optimierte Version einen ähnlichen linearen Anstieg der Zeit, was auf eine Komplexität von \( O(n) \) hindeutet, bei der die Verarbeitungszeit pro Pixel mit einer Steigung von \( 7.1 \times 10^{-5} \) ms\(\cdot\)pixel\(^{-1}\) konstant bleibt. Im Gegensatz dazu zeigt die SIMD-Implementierung eine deutlich flachere Steigung (\( 1.1 \times 10^{-5} \) ms\(\cdot\)pixel\(^{-1}\)),da Mit steigender Anzahl der Sektoren erhöht sich ebenso die Leistungsfähigkeit der SIMD. was auf eine effizientere Pixelverarbeitung schließen lässt. Mit zunehmender Pixelanzahl wird die Effizienz der SIMD deutlicher, insbesondere bei größeren Bilddaten, aufgrund ihrer Fähigkeit zur parallelen Verarbeitung.
+
+
+\begin{tikzpicture}
+\begin{axis}[
+    title={Implementierung},
+    xlabel={Skalierungsfaktor},
+    ylabel={Zeit in ms},
+    xmin=0, xmax=15,
+    ymin=0, ymax=800,
+    xtick={0,2,4,6,8,10,12,14,16},
+    ytick={0,200,400,600,800},
+    legend pos=north west,
+    ymajorgrids=true,
+    grid style=dashed,
+    scaled ticks=false,
+    tick label style={/pgf/number format/fixed},
+]
+
+\addplot[
+    color=red,
+    mark=square,
+    ]
+    coordinates {
+    (1,1.347)(2,14.953)(3,38.728)(4,64.501)(5,86.003)(6,129.159)(7,165.171)(8,226.019)(9,291.192)(10,381.240)(11,439.381)(12,500.906)(13,594.713)(14,687.771)(15,794.090)
+    };
+    \addlegendentry{V1}
+
+\addplot[
+    color=blue,
+    mark=*,
+    ]
+    coordinates {
+    (1,0.935)(2,9.602)(3,8.756)(4,12.495)(5,17.233)(6,22.817)(7,30.697)(8,44.067)(9,53.159)(10,58.192)(11,67.767)(12,91.688)(13,98.978)(14,109.932)(15,125.871)
+    };
+    \addlegendentry{V2}
+
+\addplot[
+    color=green,
+    mark=triangle,
+    ]
+    coordinates {
+    (1,0.517)(2,2.707)(3,3.307)(4,5.134)(5,7.914)(6,10.487)(7,13.839)(8,19.170)(9,29.339)(10,28.107)(11,40.195)(12,44.276)(13,50.974)(14,62.360)(15,65.233)
+    };
+    \addlegendentry{V3}
+
+\end{axis}
+\end{tikzpicture} \\
+
+Das zweite Diagramm stellt die Laufzeit in Abhängigkeit von ansteigenden Skalierungsfaktoren von 1 bis 15 dar. Die naive Implementierung zeigt hierbei einen steilen, linearen Anstieg der Laufzeit mit zunehmendem Skalierungsfaktor, was auf eine direkte Korrelation zwischen Skalierungsfaktor und Zeitkomplexität hinweist.
+
+Die beiden anderen Implementierungen hingegen weisen im Vergleich zur naiven Implementierung einen moderateren Anstieg der Laufzeit auf. Für Skalierungsfaktoren kleiner als 4 ist der Unterschied in der Leistung bemerkenswert, jedoch nicht übermäßig groß. Bei weiter ansteigenden Skalierungsfaktoren beweisen sie jedoch eine wesentlich bessere Performance. Die SIMD-Implementierung ist nach wie vor die dominierende, da sie die flachste Steigung der drei aufweist und eine relativ konstante sowie niedrige Laufzeit beibehält, was sie zur effizientesten Implementierung für die Verarbeitung in großem Maßstab macht.
+
 
 \begin{table}[ht]
 \centering
 \begin{tabular}{|c|c|c|c|c|c|}
 \hline
-Pixel & Naiv (ms) & Opt. (ms) & SIMD (ms) & Naiv/SIMD (\%) & Naiv/Opt. (\%) \\ 
+Pixel & V1 (ms) & V2 (ms) & V3 (ms) & V1/V3 (\%) & V1/V2. (\%) \\ 
 \hline
 100k & 5.5 & 2.12 & 0.73 & 753.42 & 259.62 \\
 500k & 27.88 & 11.1 & 3.29 & 847.05 & 251.17 \\
@@ -241,8 +331,7 @@ Pixel & Naiv (ms) & Opt. (ms) & SIMD (ms) & Naiv/SIMD (\%) & Naiv/Opt. (\%) \\
 \label{table:comparison2}
 \end{table}
 
-\noindent
-Anhand der durchgeführten Tests ist klar zu erkennen, dass die Laufzeit des SIMD-Codes beiden Alternativlösungen deutlich überlegen ist. Der erreichte SpeedUp bleibt in Bezug auf der Anzahl der Pixel jedoch durchschnittlich konstant, da alle Ansätze das gleiche Laufzeitverhältnis von $O(n)$ nutzen - nur eben mit einem unterschiedlichen Faktor
+
 
 \subsection{Cache}
 Aufgrund der Größe des resultierenden Bildes passt das Bild in keinen der L-Caches, wodurch die Speicherung vermutlich auf dem Hauptspeicher erfolgt und damit die Laufzeit des Programmes beeinträchtigt.
