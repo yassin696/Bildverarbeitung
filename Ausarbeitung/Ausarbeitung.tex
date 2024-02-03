@@ -192,6 +192,9 @@ $20$ & $535449$ & $471138$ & $687737$ \\
 \label{table:comparison}
 \end{table}
 
+\noindent
+Verglichen wurden die finalen Ausgaben eines $512 \cdot 512$ Bildes mit jeweils dem gleichen Faktor. Die gemessenen unterschiedlichen Werte unterscheiden sich jeweils nur um eins. Dieser Unterschied ist auf Multiplikationen mit dem höheren Faktor und den kleinen Konstanten ($\leq 1.0$) zurückzuführen, da eine Multiplikation mit einer größeren und kleineren Zahl in Ungenauigkeit resultiert.
+
 \section{Performanzanalyse}
 Um die Performanz der vorgestellten und implementierten Lösungsansätze zu vergleichen, überprüfen und beurteilen zu können wurden sie auf einem Windows 11 Laptop mit einer i5-10300H CPU (L1: 256KB, L2: 1MB, L3: 8MB) mit 24GB 2600MHz RAM verglichen. Das Programm wurde mit GCC 11.4.0 -O0 kompiliert.
 
@@ -237,6 +240,9 @@ Pixel & Naiv (ms) & Opt. (ms) & SIMD (ms) & Naiv/SIMD (\%) & Naiv/Opt. (\%) \\
 \caption{Laufzeitgergleich der Implementationsmethoden mit Skalierungsfaktor 2}
 \label{table:comparison2}
 \end{table}
+
+\noindent
+Anhand der durchgeführten Tests ist klar zu erkennen, dass die Laufzeit des SIMD-Codes beiden Alternativlösungen deutlich überlegen ist. Der erreichte SpeedUp bleibt in Bezug auf der Anzahl der Pixel jedoch durchschnittlich konstant, da alle Ansätze das gleiche Laufzeitverhältnis von $O(n)$ nutzen - nur eben mit einem unterschiedlichen Faktor
 
 \subsection{Cache}
 Aufgrund der Größe des resultierenden Bildes passt das Bild in keinen der L-Caches, wodurch die Speicherung vermutlich auf dem Hauptspeicher erfolgt und damit die Laufzeit des Programmes beeinträchtigt.
