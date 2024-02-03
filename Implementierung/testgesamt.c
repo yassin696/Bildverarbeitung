@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 199309L
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -9,7 +10,7 @@
 #include <immintrin.h>
 #include <emmintrin.h>
 #include <time.h>
-#include "methods.h"
+#include "implementierung.h"
 
 
 double get_elapsed_time(struct timespec start, struct timespec end) {
@@ -21,13 +22,14 @@ int main() {
     size_t pixel_counts[] = {100000,500000,1000000, 2000000, 4000000, 8000000, 16000000};
     size_t num_tests = sizeof(pixel_counts) / sizeof(pixel_counts[0]);
     size_t scale_factor = 2; // Assuming a scaling factor of 2
+    printf("for a scale factor : %li \n",scale_factor);
     float a = 0.299, b = 0.587, c = 0.114;
 
     for (size_t test = 0; test < num_tests; test++) {
         size_t num_pixels = pixel_counts[test];
         size_t width = sqrt(pixel_counts[test]);
         size_t height = num_pixels / width;
-
+        printf("\n\n");
         printf("for a number of pixels :%li\n",num_pixels);
         // Allocate memory for random image data
         uint8_t* img = (uint8_t*)malloc(width * height * 3 * sizeof(uint8_t));
@@ -90,22 +92,17 @@ int main() {
         size_t diffs_naive_optimized = 0, diffs_naive_simd = 0, diffs_optimized_simd = 0;
         size_t total_pixels = width * height * scale_factor * scale_factor;
         for (size_t i = 0; i < total_pixels; i++) {
-    if (result_naive[i] != result_optimized[i]) {
-        if (result_naive[i] != result_optimized[i] ) {
+    if (result_naive[i] != result_optimized[i]) {       
             diffs_naive_optimized++;
-        }
     }
 
     if (result_naive[i] != result_simd[i]) {
-        if (result_naive[i] != result_simd[i] ) {
             diffs_naive_simd++;
-        }
     }
 
     if (result_optimized[i] != result_simd[i]) {
-        if (result_optimized[i] != result_simd[i] ) {
             diffs_optimized_simd++;
-        }
+        
     }
 }
 
@@ -113,9 +110,9 @@ int main() {
         printf("    Differences between naive and optimized: %zu\n", diffs_naive_optimized);
         printf("    Differences between naive and SIMD: %zu\n", diffs_naive_simd);
         printf("    Differences between optimized and SIMD: %zu\n", diffs_optimized_simd);
-        printf("\n");
       
     // Free the allocated memory for result arrays
+
         free(img);
         free(tmp);
         free(result_naive);
@@ -123,13 +120,6 @@ int main() {
         free(result_simd);  }  
         // Clean up
  size_t widths = 512, heights = 512;
-//uint8_t* img = (uint8_t*)malloc(width * height * 3 * sizeof(uint8_t));
-
-
-
- //   float a = 0.299, b = 0.587, c = 0.114;
-   
-
     // Allocate memory for random image data
     uint8_t* imgs = (uint8_t*)malloc(widths * heights * 3 * sizeof(uint8_t));
     if (!imgs) {
@@ -143,8 +133,7 @@ int main() {
     }
 
     for (size_t scale_factor = 1; scale_factor <= 20; scale_factor++) {
-        if (scale_factor==20)scale_factor=26;
-        printf("\n");
+        
         printf("Testing for scale factor %zu:\n", scale_factor);
 
         // Allocate memory for grayscale conversion
@@ -154,21 +143,20 @@ int main() {
             free(imgs);
             return 1;
         }
-
+size_t scaled_width=widths*scale_factor;
+size_t scaled_height=heights*scale_factor;
         // Allocate memory for the result buffers
-        size_t scaled_width = widths * scale_factor;
-        size_t scaled_height = heights * scale_factor;
-        uint8_t* result_naive = (uint8_t*)malloc(scaled_width * scaled_height * sizeof(uint8_t));
-        uint8_t* result_optimized = (uint8_t*)malloc(scaled_width * scaled_height * sizeof(uint8_t));
-        uint8_t* result_simd = (uint8_t*)malloc(scaled_width * scaled_height * sizeof(uint8_t));
+        uint8_t* result_naive_scale = (uint8_t*)malloc(scaled_width * scaled_height * sizeof(uint8_t));
+        uint8_t* result_optimized_scale = (uint8_t*)malloc(scaled_width * scaled_height * sizeof(uint8_t));
+        uint8_t* result_simd_scale = (uint8_t*)malloc(scaled_width * scaled_height * sizeof(uint8_t));
 
-        if (!result_naive || !result_optimized || !result_simd) {
+        if (!result_naive_scale || !result_optimized_scale || !result_simd_scale) {
             fprintf(stderr, "Memory allocation for result buffers failed\n");
             free(imgs);
             free(tmps);
-            free(result_naive);
-            free(result_optimized);
-            free(result_simd);
+            free(result_naive_scale);
+            free(result_optimized_scale);
+            free(result_simd_scale);
             return 1;
         }
 
@@ -176,27 +164,49 @@ int main() {
 
         // Naive method
         clock_gettime(CLOCK_MONOTONIC, &start);
-        interpolate_naive(imgs, widths, heights, a, b, c, scale_factor, (uint8_t*)tmps, result_naive);
+        interpolate_naive(imgs, widths, heights, a, b, c, scale_factor, (uint8_t*)tmps, result_naive_scale);
         clock_gettime(CLOCK_MONOTONIC, &end);
-        printf("Naive method runtime: %f seconds\n", get_elapsed_time(start, end));
+  //      printf("Naive method runtime: %f seconds\n", get_elapsed_time(start, end));
 
         // Optimized method
         clock_gettime(CLOCK_MONOTONIC, &start);
-        interpolate_algorithm_optimized(imgs, widths, heights, a, b, c, scale_factor, (uint8_t*)tmps, result_optimized);
+        interpolate_algorithm_optimized(imgs, widths, heights, a, b, c, scale_factor, (uint8_t*)tmps, result_optimized_scale);
         clock_gettime(CLOCK_MONOTONIC, &end);
-        printf("Optimized method runtime: %f seconds\n", get_elapsed_time(start, end));
+  //      printf("Optimized method runtime: %f seconds\n", get_elapsed_time(start, end));
 
         // SIMD method
         clock_gettime(CLOCK_MONOTONIC, &start);
-        interpolate_simd(imgs, widths, heights, a, b, c, scale_factor, (uint8_t*)tmps, result_simd);
+        interpolate_simd(imgs, widths, heights, a, b, c, scale_factor, (uint8_t*)tmps, result_simd_scale);
         clock_gettime(CLOCK_MONOTONIC, &end);
-        printf("SIMD method runtime: %f seconds\n", get_elapsed_time(start, end));
+  //      printf("SIMD method runtime: %f seconds\n", get_elapsed_time(start, end));
 
         // Free allocated memory
         free(tmps);
-        free(result_naive);
-        free(result_optimized);
-        free(result_simd);
+        
+        printf("\n");
+        printf("    Accuracy testing part :\n");
+        size_t diffs_naive_optimized_scale = 0, diffs_naive_simd_scale = 0, diffs_optimized_simd_scale = 0;
+        size_t total_pixels = widths * heights * scale_factor * scale_factor;
+        for (size_t i = 0; i < total_pixels; i++) {
+    if (result_naive_scale[i] != result_optimized_scale[i]) {       
+            diffs_naive_optimized_scale++;
+    }
+
+    if (result_naive_scale[i] != result_simd_scale[i]) {
+            diffs_naive_simd_scale++;
+    }
+
+    if (result_optimized_scale[i] != result_simd_scale[i]) {
+            diffs_optimized_simd_scale++;
+        
+    }
+}
+
+        // Print the comparison results
+        printf("    Differences between naive and optimized: %zu\n", diffs_naive_optimized_scale);
+        printf("    Differences between naive and SIMD: %zu\n", diffs_naive_simd_scale);
+        printf("    Differences between optimized and SIMD: %zu\n", diffs_optimized_simd_scale);
+        printf("\n");
     }
 
     free(imgs);
