@@ -1,18 +1,21 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -std=c11 -msse4.1 -O3
-LDFLAGS=-lm 
+LDFLAGS=-lm
 TARGET=interpolate
-OBJ=finalfile.o
+OBJ=implementierung.o rahmenprogramm.o
 
 .PHONY: all clean
 
-all:$(TARGET)
+all: $(TARGET)
 
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET) $(LDFLAGS)
 
-$(OBJ): finalfile.c
-	$(CC) $(CFLAGS) -c finalefile3.c -o $(OBJ)
+implementierung.o: implementierung.c implementierung.h
+	$(CC) $(CFLAGS) -c implementierung.c -o implementierung.o
+
+rahmenprogramm.o: rahmenprogramm.c implementierung.h
+	$(CC) $(CFLAGS) -c rahmenprogramm.c -o rahmenprogramm.o
 
 clean:
 	rm -f $(TARGET) $(OBJ)
