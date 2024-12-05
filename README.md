@@ -8,3 +8,4 @@ Beachten Sie, dass die äußere Form und die Einhaltung der Formalitäten wichti
 - `Implementierung/`: Ihre Implementierung
 - `Implementierung/Makefile`: Makefile für Ihre Implementierung, welches durch einen Aufruf von `make` Ihre Implementierung kompiliert
 - `Vortrag/Vortrag.pdf`: Folien für Ihre Abschlusspräsentation
+# Bildverarbeitung
